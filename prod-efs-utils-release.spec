@@ -37,12 +37,11 @@
 %endif
 
 %global proxy_name efs-proxy
-%global proxy_version 2.0.1
 
 %{?!include_vendor_tarball:%define include_vendor_tarball true}
 
 Name      : amazon-efs-utils
-Version   : 2.0.1
+Version   : 2.0.2
 Release   : 1%{platform}
 Summary   : This package provides utilities for simplifying the use of EFS file systems
 
@@ -75,12 +74,14 @@ Requires(postun) : /sbin/service
 
 # RHEL 7 doesn't provide a Rust or Cargo package,
 # so users are expected to install it through rustup.
+%if ! 0%{?rhel} == 7
 BuildRequires  : cargo rust
+%endif
 BuildRequires: openssl-devel
 
 Source0    : %{name}.tar.gz
 %if "%{include_vendor_tarball}" == "true"
-Source1    : %{proxy_name}-%{proxy_version}-vendor.tar.xz
+Source1    : %{proxy_name}-%{$Version}-vendor.tar.xz
 Source2    : config.toml
 %endif
 
@@ -167,6 +168,10 @@ fi
 %clean
 
 %changelog
+* Mon May 20 2024 Anthony Tse <anthotse@amazon.com> - 2.0.2
+- Check for efs-proxy PIDs when cleaning tunnel state files
+- Add PID to log entries
+
 * Mon Apr 23 2024 Ryan Stankiewicz <rjstank@amazon.com> - 2.0.1
 - Disable Nagle's algorithm for efs-proxy TLS mounts to improve latencies 
 
