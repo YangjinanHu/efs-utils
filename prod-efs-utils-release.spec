@@ -81,7 +81,7 @@ BuildRequires: openssl-devel
 
 Source0    : %{name}.tar.gz
 %if "%{include_vendor_tarball}" == "true"
-Source1    : %{proxy_name}-%{$Version}-vendor.tar.xz
+Source1    : %{proxy_name}-%{Version}-vendor.tar.xz
 Source2    : config.toml
 %endif
 
