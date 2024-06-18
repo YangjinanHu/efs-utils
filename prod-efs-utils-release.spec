@@ -164,7 +164,7 @@ fi
 %clean
 
 %changelog
-* Tue June 18 2024 Arnav Gupta <arnavgup@amazon.com> - 2.0.3
+* Tue Jun 18 2024 Arnav Gupta <arnavgup@amazon.com> - 2.0.3
 - Upgrade py version
 - Replace deprecated usage of datetime 
 
