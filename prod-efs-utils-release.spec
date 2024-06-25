@@ -41,7 +41,7 @@
 %{?!include_vendor_tarball:%define include_vendor_tarball true}
 
 Name      : amazon-efs-utils
-Version   : 2.0.3
+Version   : 2.0.4
 Release   : 1%{platform}
 Summary   : This package provides utilities for simplifying the use of EFS file systems
 
@@ -72,12 +72,16 @@ Requires(preun)  : /sbin/service /sbin/chkconfig
 Requires(postun) : /sbin/service
 %endif
 
+# RHEL 7 doesn't provide a Rust or Cargo package,
+# so users are expected to install it through rustup.
+%if ! 0%{?rhel} == 7
 BuildRequires  : cargo rust
+%endif
 BuildRequires: openssl-devel
 
 Source0    : %{name}.tar.gz
 %if "%{include_vendor_tarball}" == "true"
-Source1    : %{proxy_name}-%{version}-vendor.tar.xz
+Source1    : %{proxy_name}-%{$Version}-vendor.tar.xz
 Source2    : config.toml
 %endif
 
@@ -164,6 +168,9 @@ fi
 %clean
 
 %changelog
+* Tue Jun 25 2024 Anthony Tse <anthotse@amazon.com> - 2.0.4
+- Add retry logic to and increase timeout for EC2 metadata token retrieval requests
+
 * Tue Jun 18 2024 Arnav Gupta <arnavgup@amazon.com> - 2.0.3
 - Upgrade py version
 - Replace deprecated usage of datetime 
