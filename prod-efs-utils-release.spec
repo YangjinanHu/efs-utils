@@ -175,7 +175,7 @@ fi
 - Check for efs-proxy PIDs when cleaning tunnel state files
 - Add PID to log entries
 
-* Mon Apr 23 2024 Ryan Stankiewicz <rjstank@amazon.com> - 2.0.1
+* Tue Apr 23 2024 Ryan Stankiewicz <rjstank@amazon.com> - 2.0.1
 - Disable Nagle's algorithm for efs-proxy TLS mounts to improve latencies 
 
 * Mon Apr 08 2024 Ryan Stankiewicz <rjstank@amazon.com> - 2.0.0
