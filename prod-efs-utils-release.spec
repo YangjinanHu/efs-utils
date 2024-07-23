@@ -42,7 +42,7 @@
 
 Name      : amazon-efs-utils
 Version   : 2.0.4
-Release   : 1%{platform}
+Release   : 2%{platform}
 Summary   : This package provides utilities for simplifying the use of EFS file systems
 
 Group     : Amazon/Tools
@@ -72,7 +72,14 @@ Requires(preun)  : /sbin/service /sbin/chkconfig
 Requires(postun) : /sbin/service
 %endif
 
+# RHEL 7 doesn't provide a Rust or Cargo package,
+# so users are expected to install it through rustup. 
+# The conditional here checks for amzn2 because on amzn2, 
+# '0%{?rhel}' also evaluates to 7.
+%if 0%{?amzn2} || 0%{?rhel} != 7
 BuildRequires  : cargo rust
+%endif
+
 BuildRequires: openssl-devel
 
 Source0    : %{name}.tar.gz
@@ -199,7 +206,7 @@ fi
 - Add debug statement for size of state file write
 - Add parameters in mount options for assume web role with web identity
 
-* Wed Jan 1 2023 Ryan Stankiewicz <rjstank@amazon.com> - 1.34.5
+* Wed Jan 4 2023 Ryan Stankiewicz <rjstank@amazon.com> - 1.34.5
 - Watchdog detect empty private key and regenerate
 - Update man page
 - Avoid redundant get_target_region call
