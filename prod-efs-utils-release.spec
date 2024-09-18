@@ -38,7 +38,7 @@
 
 #%global proxy_name efs-proxy
 
-%{?!include_vendor_tarball:%define include_vendor_tarball true}
+%{?!include_vendor_tarball:%global include_vendor_tarball true}
 
 Name      : amazon-efs-utils
 Version   : 2.0.4
