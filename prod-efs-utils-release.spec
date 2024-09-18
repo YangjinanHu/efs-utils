@@ -36,7 +36,7 @@
 %global efs_bindir /sbin
 %endif
 
-%global proxy_name efs-proxy
+#%global proxy_name efs-proxy
 
 %{?!include_vendor_tarball:%define include_vendor_tarball true}
 
@@ -77,7 +77,7 @@ Requires(postun) : /sbin/service
 # The conditional here checks for amzn2 because on amzn2, 
 # '0%{?rhel}' also evaluates to 7.
 %if 0%{?amzn2} || 0%{?rhel} != 7
-BuildRequires  : cargo rust
+BuildRequires  : rust-toolset
 %endif
 
 BuildRequires: openssl-devel
@@ -85,7 +85,6 @@ BuildRequires: openssl-devel
 Source0    : %{name}.tar.gz
 %if "%{include_vendor_tarball}" == "true"
 Source1    : %{proxy_name}-%{version}-vendor.tar.xz
-Source2    : config.toml
 %endif
 
 %description
@@ -94,17 +93,23 @@ This package provides utilities for simplifying the use of EFS file systems
 %global debug_package %{nil}
 
 %prep
-%setup -n %{name}
-mkdir -p %{_builddir}/%{name}/src/proxy/.cargo
+%autosetup -n %{name} -p1
+pushd src/proxy/
 %if "%{include_vendor_tarball}" == "true"
-cp %{SOURCE2} %{_builddir}/%{name}/src/proxy/.cargo/
-tar xf %{SOURCE1}
-mv vendor %{_builddir}/%{name}/src/proxy/
+%cargo_prep -V 1
+%else
+%cargo_prep
 %endif
+popd
 
 %build
 cd %{_builddir}/%{name}/src/proxy
-cargo build --release --manifest-path %{_builddir}/%{name}/src/proxy/Cargo.toml
+%cargo_build
+%cargo_license_summary
+%{cargo_license} > LICENSE.dependencies
+%cargo_vendor_manifest
+mv LICENSE.dependencies ../../
+mv cargo-vendor.txt ../../
 
 %install
 mkdir -p %{buildroot}%{_sysconfdir}/amazon/efs
@@ -129,6 +134,8 @@ install -p -m 644 %{_builddir}/%{name}/man/mount.efs.8 %{buildroot}%{_mandir}/ma
 install -p -m 755 %{_builddir}/%{name}/src/proxy/target/release/efs-proxy %{buildroot}%{efs_bindir}/efs-proxy
 
 %files
+%license LICENSE.dependencies
+%license cargo-vendor.txt
 %defattr(-,root,root,-)
 %if %{with_systemd}
 %{_unitdir}/amazon-efs-mount-watchdog.service
