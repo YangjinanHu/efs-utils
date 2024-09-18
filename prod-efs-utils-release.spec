@@ -36,7 +36,7 @@
 %global efs_bindir /sbin
 %endif
 
-#%global proxy_name efs-proxy
+%global proxy_name efs-proxy
 
 %{?!include_vendor_tarball:%global include_vendor_tarball true}
 
