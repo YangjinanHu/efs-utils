@@ -41,8 +41,8 @@
 %{?!include_vendor_tarball:%global include_vendor_tarball true}
 
 Name      : amazon-efs-utils
-Version   : 2.0.4
-Release   : 2%{platform}
+Version   : 2.1.0
+Release   : 1%{platform}
 Summary   : This package provides utilities for simplifying the use of EFS file systems
 
 Group     : Amazon/Tools
@@ -178,6 +178,10 @@ fi
 %clean
 
 %changelog
+* Wed Sep 18 2024 Julie Rakas <jrakas@amazon.com> - 2.1.0
+- Add mount option for specifying region
+- Add new ISO regions to config file
+
 * Tue Jun 25 2024 Anthony Tse <anthotse@amazon.com> - 2.0.4
 - Add retry logic to and increase timeout for EC2 metadata token retrieval requests
 
