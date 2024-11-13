@@ -38,10 +38,10 @@
 
 %global proxy_name efs-proxy
 
-%{?!include_vendor_tarball:%define include_vendor_tarball true}
+%{?!include_vendor_tarball:%global include_vendor_tarball true}
 
 Name      : amazon-efs-utils
-Version   : 2.1.0
+Version   : 2.2.0
 Release   : 1%{platform}
 Summary   : This package provides utilities for simplifying the use of EFS file systems
 
@@ -87,15 +87,12 @@ BuildRequires: openssl-devel
 Source0    : %{name}.tar.gz
 %if "%{include_vendor_tarball}" == "true"
 Source1    : %{proxy_name}-%{version}-vendor.tar.xz
-Source2    : config.toml
 %endif
 
 %description
 This package provides utilities for simplifying the use of EFS file systems
 
 %global debug_package %{nil}
-
-%prep
 
 # If yum doesn't provides rust and cargo
 # use rpmbuild --without system_rust
@@ -115,17 +112,22 @@ if ! command -v rustc &> /dev/null; then
     exit 1
 fi
 
-%setup -n %{name}
-mkdir -p %{_builddir}/%{name}/src/proxy/.cargo
+%prep
+%autosetup -n %{name} -a1
 %if "%{include_vendor_tarball}" == "true"
-cp %{SOURCE2} %{_builddir}/%{name}/src/proxy/.cargo/
-tar xf %{SOURCE1}
-mv vendor %{_builddir}/%{name}/src/proxy/
+%cargo_prep -V vendor
+%else
+%cargo_prep
 %endif
 
 %build
 cd %{_builddir}/%{name}/src/proxy
-cargo build --release --manifest-path %{_builddir}/%{name}/src/proxy/Cargo.toml
+%cargo_build
+%cargo_license_summary
+%{cargo_license} > LICENSE.dependencies
+%cargo_vendor_manifest
+mv LICENSE.dependencies ../../
+mv cargo-vendor.txt ../../
 
 %install
 mkdir -p %{buildroot}%{_sysconfdir}/amazon/efs
@@ -150,6 +152,8 @@ install -p -m 644 %{_builddir}/%{name}/man/mount.efs.8 %{buildroot}%{_mandir}/ma
 install -p -m 755 %{_builddir}/%{name}/src/proxy/target/release/efs-proxy %{buildroot}%{efs_bindir}/efs-proxy
 
 %files
+%license LICENSE.dependencies
+%license cargo-vendor.txt
 %defattr(-,root,root,-)
 %if %{with_systemd}
 %{_unitdir}/amazon-efs-mount-watchdog.service
@@ -192,6 +196,10 @@ fi
 %clean
 
 %changelog
+* Wed Nov 13 2024 Anthony Tse <anthotse@amazon.com> - 2.2.0
+- Use region-specific domain suffixes for dns endpoints where missing
+- Merge PR #211 - Amend Debian control to use binary architecture
+
 * Wed Sep 18 2024 Julie Rakas <jrakas@amazon.com> - 2.1.0
 - Add mount option for specifying region
 - Add new ISO regions to config file

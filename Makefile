@@ -48,7 +48,8 @@ rpm-only:
 	cp $(SPECFILE) $(BUILD_DIR)/SPECS
 	cp $(SOURCE_TARBALL) $(BUILD_DIR)/SOURCES
 	cp config.toml $(BUILD_DIR)/SOURCES
-	rpmbuild -ba --define "_topdir `pwd`/$(BUILD_DIR)" --define "include_vendor_tarball false" $(BUILD_DIR)/SPECS/$(SPECFILE)
+	cp efs-proxy-*-vendor.tar.xz $(BUILD_DIR)/SOURCES 2>/dev/null
+	rpmbuild -ba --define "_topdir `pwd`/$(BUILD_DIR)" --define "include_vendor_tarball true" $(BUILD_DIR)/SPECS/$(SPECFILE) 
 	cp $(BUILD_DIR)/RPMS/*/*rpm build
 
 .PHONY: rpm
