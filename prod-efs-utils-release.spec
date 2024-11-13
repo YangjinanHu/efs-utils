@@ -115,7 +115,7 @@ fi
 %prep
 %autosetup -n %{name} -a1
 %if "%{include_vendor_tarball}" == "true"
-%cargo_prep -V vendor
+%cargo_prep -v vendor
 %else
 %cargo_prep
 %endif
@@ -149,7 +149,7 @@ install -p -m 444 %{_builddir}/%{name}/dist/efs-utils.crt %{buildroot}%{_sysconf
 install -p -m 755 %{_builddir}/%{name}/src/mount_efs/__init__.py %{buildroot}%{efs_bindir}/mount.efs
 install -p -m 755 %{_builddir}/%{name}/src/watchdog/__init__.py %{buildroot}%{_bindir}/amazon-efs-mount-watchdog
 install -p -m 644 %{_builddir}/%{name}/man/mount.efs.8 %{buildroot}%{_mandir}/man8
-install -p -m 755 %{_builddir}/%{name}/src/proxy/target/release/efs-proxy %{buildroot}%{efs_bindir}/efs-proxy
+install -p -m 755 %{_builddir}/%{name}/src/proxy/target/rpm/efs-proxy %{buildroot}%{efs_bindir}/efs-proxy
 
 %files
 %license LICENSE.dependencies
