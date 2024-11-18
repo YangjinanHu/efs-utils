@@ -95,6 +95,7 @@ This package provides utilities for simplifying the use of EFS file systems
 %global debug_package %{nil}
 
 %prep
+
 # If yum doesn't provides rust and cargo
 # use rpmbuild --without system_rust
 %if %{without system_rust}
