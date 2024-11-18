@@ -11,6 +11,7 @@ SOURCE_TARBALL = $(PACKAGE_NAME).tar.gz
 SPECFILE = $(PACKAGE_NAME).spec
 BUILD_DIR = build/rpmbuild
 PROXY_VERSION = 2.0.0
+RPM_BUILD_FLAGS ?= --with system_rust
 export PYTHONPATH := $(shell pwd)/src
 
 .PHONY: clean
@@ -49,11 +50,15 @@ rpm-only:
 	cp $(SOURCE_TARBALL) $(BUILD_DIR)/SOURCES
 	cp config.toml $(BUILD_DIR)/SOURCES
 	cp efs-proxy-*-vendor.tar.xz $(BUILD_DIR)/SOURCES 2>/dev/null
-	rpmbuild -ba --define "_topdir `pwd`/$(BUILD_DIR)" --define "include_vendor_tarball true" $(BUILD_DIR)/SPECS/$(SPECFILE) 
+	rpmbuild -ba --define "_topdir `pwd`/$(BUILD_DIR)" --define "include_vendor_tarball true" $(BUILD_DIR)/SPECS/$(SPECFILE) $(RPM_BUILD_FLAGS)
 	cp $(BUILD_DIR)/RPMS/*/*rpm build
 
 .PHONY: rpm
 rpm: sources rpm-only
+
+.PHONY: rpm-without-system-rust
+rpm-without-system-rust: sources
+	$(MAKE) rpm-only RPM_BUILD_FLAGS="--without system_rust"
 
 .PHONY: deb
 deb:

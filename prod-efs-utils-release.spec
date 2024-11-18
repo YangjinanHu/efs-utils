@@ -94,6 +94,7 @@ This package provides utilities for simplifying the use of EFS file systems
 
 %global debug_package %{nil}
 
+%prep
 # If yum doesn't provides rust and cargo
 # use rpmbuild --without system_rust
 %if %{without system_rust}
@@ -112,7 +113,6 @@ if ! command -v rustc &> /dev/null; then
     exit 1
 fi
 
-%prep
 %autosetup -n %{name} -a1
 %if "%{include_vendor_tarball}" == "true"
 %cargo_prep -v vendor

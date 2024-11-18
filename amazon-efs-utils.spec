@@ -38,7 +38,7 @@
 
 %global proxy_name efs-proxy
 
-%{?!include_vendor_tarball:%global include_vendor_tarball true}
+%{?!include_vendor_tarball:%define include_vendor_tarball true}
 
 Name      : amazon-efs-utils
 Version   : 2.2.0
@@ -87,12 +87,15 @@ BuildRequires: openssl-devel
 Source0    : %{name}.tar.gz
 %if "%{include_vendor_tarball}" == "true"
 Source1    : %{proxy_name}-%{version}-vendor.tar.xz
+Source2    : config.toml
 %endif
 
 %description
 This package provides utilities for simplifying the use of EFS file systems
 
 %global debug_package %{nil}
+
+%prep
 
 # If yum doesn't provides rust and cargo
 # use rpmbuild --without system_rust
@@ -112,22 +115,17 @@ if ! command -v rustc &> /dev/null; then
     exit 1
 fi
 
-%prep
-%autosetup -n %{name} -a1
+%setup -n %{name}
+mkdir -p %{_builddir}/%{name}/src/proxy/.cargo
 %if "%{include_vendor_tarball}" == "true"
-%cargo_prep -v vendor
-%else
-%cargo_prep
+cp %{SOURCE2} %{_builddir}/%{name}/src/proxy/.cargo/
+tar xf %{SOURCE1}
+mv vendor %{_builddir}/%{name}/src/proxy/
 %endif
 
 %build
 cd %{_builddir}/%{name}/src/proxy
-%cargo_build
-%cargo_license_summary
-%{cargo_license} > LICENSE.dependencies
-%cargo_vendor_manifest
-mv LICENSE.dependencies ../../
-mv cargo-vendor.txt ../../
+cargo build --release --manifest-path %{_builddir}/%{name}/src/proxy/Cargo.toml
 
 %install
 mkdir -p %{buildroot}%{_sysconfdir}/amazon/efs
@@ -149,11 +147,9 @@ install -p -m 444 %{_builddir}/%{name}/dist/efs-utils.crt %{buildroot}%{_sysconf
 install -p -m 755 %{_builddir}/%{name}/src/mount_efs/__init__.py %{buildroot}%{efs_bindir}/mount.efs
 install -p -m 755 %{_builddir}/%{name}/src/watchdog/__init__.py %{buildroot}%{_bindir}/amazon-efs-mount-watchdog
 install -p -m 644 %{_builddir}/%{name}/man/mount.efs.8 %{buildroot}%{_mandir}/man8
-install -p -m 755 %{_builddir}/%{name}/src/proxy/target/rpm/efs-proxy %{buildroot}%{efs_bindir}/efs-proxy
+install -p -m 755 %{_builddir}/%{name}/src/proxy/target/release/efs-proxy %{buildroot}%{efs_bindir}/efs-proxy
 
 %files
-%license LICENSE.dependencies
-%license cargo-vendor.txt
 %defattr(-,root,root,-)
 %if %{with_systemd}
 %{_unitdir}/amazon-efs-mount-watchdog.service
