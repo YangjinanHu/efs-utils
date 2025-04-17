@@ -56,7 +56,7 @@ AMAZON_LINUX_2_RELEASE_VERSIONS = [
     AMAZON_LINUX_2_RELEASE_ID,
     AMAZON_LINUX_2_PRETTY_NAME,
 ]
-VERSION = "2.2.0"
+VERSION = "2.3.0"
 SERVICE = "elasticfilesystem"
 
 CONFIG_FILE = "/etc/amazon/efs/efs-utils.conf"
@@ -210,6 +210,8 @@ def get_aws_security_credentials(config, credentials_source, region):
         return get_aws_security_credentials_from_file("config", value)
     elif method == "ecs":
         return get_aws_security_credentials_from_ecs(config, value)
+    elif method == "podidentity":
+        return get_aws_security_credentials_from_pod_identity(config, value)
     elif method == "webidentity":
         return get_aws_security_credentials_from_webidentity(
             config, *(value.split(",")), region=region
@@ -372,6 +374,46 @@ def get_aws_security_credentials_from_ecs(config, uri):
 
     if ecs_security_dict and all(k in ecs_security_dict for k in dict_keys):
         return ecs_security_dict
+
+    return None
+
+
+def get_aws_security_credentials_from_pod_identity(config, value):
+    dict_keys = ["AccessKeyId", "SecretAccessKey", "Token"]
+
+    try:
+        creds_uri, token_file = value.split(",")
+    except ValueError:
+        logging.info("Invalid Aws Container Auth token URI format")
+        return None
+
+    try:
+        with open(token_file, "r") as f:
+            token = f.read().strip()
+            if "\r" in token or "\n" in token:
+                logging.error("AWS Container Auth Token contains invalid characters")
+                return None
+    except Exception as e:
+        logging.error("Error reading token file %s: %s", token_file, e)
+        return None
+
+    unsuccessful_resp = (
+        f"Unsuccessful retrieval of AWS security credentials at {creds_uri}"
+    )
+    url_error_msg = f"Unable to reach {creds_uri} to retrieve AWS security credentials"
+
+    pod_identity_security_dict = url_request_helper(
+        config,
+        creds_uri,
+        unsuccessful_resp,
+        url_error_msg,
+        headers={"Authorization": token},
+    )
+
+    if pod_identity_security_dict and all(
+        k in pod_identity_security_dict for k in dict_keys
+    ):
+        return pod_identity_security_dict
 
     return None
 

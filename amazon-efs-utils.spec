@@ -41,7 +41,7 @@
 %{?!include_vendor_tarball:%define include_vendor_tarball true}
 
 Name      : amazon-efs-utils
-Version   : 2.2.0
+Version   : 2.3.0
 Release   : 1%{platform}
 Summary   : This package provides utilities for simplifying the use of EFS file systems
 
@@ -192,6 +192,14 @@ fi
 %clean
 
 %changelog
+* Thu Apr 17 2025 Anthony Tse <anthotse@amazon.com> - 2.3.0
+- Add support for pod-identity credentials in the credentials chain
+- Enable mounting with IPv6 when using with the 'stunnel' mount option
+
+* Thu Mar 06 2025 Daniel Luthcke <dluthcke@amazon.com> - 2.2.1
+- Readme Updates
+- Update log4rs to mitigate CVE-2020-35881
+
 * Wed Nov 13 2024 Anthony Tse <anthotse@amazon.com> - 2.2.0
 - Use region-specific domain suffixes for dns endpoints where missing
 - Merge PR #211 - Amend Debian control to use binary architecture
