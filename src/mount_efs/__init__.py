@@ -120,7 +120,6 @@ FALLBACK_TO_MOUNT_TARGET_IP_ADDRESS_ITEM = (
 )
 INSTANCE_IDENTITY = None
 INSTANCE_AZ_ID_METADATA = None
-IPV6_ENABLED = "ipv6"
 RETRYABLE_ERRORS = ["reset by peer"]
 OPTIMIZE_READAHEAD_ITEM = "optimize_readahead"
 
@@ -239,7 +238,6 @@ EFS_ONLY_OPTIONS = [
     "az",
     "cafile",
     "iam",
-    "ipv6",
     "mounttargetip",
     "netns",
     "noocsp",
@@ -2991,11 +2989,7 @@ def get_fallback_mount_target_ip_address_helper(config, options, fs_id):
 
     mount_target = get_mount_target_in_az(efs_client, ec2_client, fs_id, az_name)
 
-    prefer_ipv6 = IPV6_ENABLED in options
-
-    if prefer_ipv6 and "Ipv6Address" in mount_target:
-        return mount_target.get("Ipv6Address")
-    elif "IpAddress" in mount_target:
+    if "IpAddress" in mount_target:
         return mount_target.get("IpAddress")
     elif "Ipv6Address" in mount_target:
         return mount_target.get("Ipv6Address")
