@@ -49,7 +49,7 @@ Group     : Amazon/Tools
 License   : MIT
 URL       : https://aws.amazon.com/efs
 
-BuildArchitectures: x86_64 aarch64
+BuildArch: x86_64 aarch64
 
 Requires  : nfs-utils
 %if 0%{?amzn2}
@@ -124,6 +124,10 @@ mv vendor %{_builddir}/%{name}/src/proxy/
 %endif
 
 %build
+# For AL2, cmake3 needs to be set as CMAKE env var
+%if 0%{?amzn2}
+export CMAKE=/usr/bin/cmake3
+%endif
 cd %{_builddir}/%{name}/src/proxy
 cargo build --release --manifest-path %{_builddir}/%{name}/src/proxy/Cargo.toml
 

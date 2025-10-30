@@ -49,7 +49,8 @@ Group     : Amazon/Tools
 License   : MIT
 URL       : https://aws.amazon.com/efs
 
-BuildArchitectures: x86_64 aarch64
+ExcludeArch: i386 i686
+BuildArch: x86_64 aarch64
 
 Requires  : nfs-utils
 %if 0%{?amzn2}
@@ -83,6 +84,15 @@ BuildRequires: rust-toolset
 %endif
 
 BuildRequires: openssl-devel
+%if 0%{?amzn2}
+BuildRequires: cmake3
+%else
+BuildRequires: cmake >= 3.0
+%endif
+BuildRequires: perl
+BuildRequires: gcc
+BuildRequires: gcc-c++
+BuildRequires: golang >= 1.17.13
 
 Source0    : %{name}.tar.gz
 %if "%{include_vendor_tarball}" == "true"
@@ -114,6 +124,8 @@ if ! command -v rustc &> /dev/null; then
     exit 1
 fi
 
+
+
 %autosetup -n %{name} -a1
 %if "%{include_vendor_tarball}" == "true"
 %cargo_prep -v vendor
@@ -122,6 +134,10 @@ fi
 %endif
 
 %build
+# For AL2, cmake3 needs to be set as CMAKE env var
+%if 0%{?amzn2}
+export CMAKE=/usr/bin/cmake3
+%endif
 cd %{_builddir}/%{name}/src/proxy
 %cargo_build
 %cargo_license_summary

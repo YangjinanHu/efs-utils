@@ -103,11 +103,6 @@ Install `cmake3` instead of `cmake`:
 sudo yum -y install cmake3
 ```
 
-After installation, ensure `cmake` points to version 3.0+:
-```bash
-sudo ln -sf $(which cmake3) /usr/bin/cmake
-```
-
 ## RPM-based Distributions
 
 ### RHEL/CentOS/Amazon Linux/Fedora
