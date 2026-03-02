@@ -86,7 +86,7 @@ except ImportError:
     BOTOCORE_PRESENT = False
 
 
-VERSION = "2.4.1"
+VERSION = "2.4.2"
 SERVICE = "elasticfilesystem"
 
 AMAZON_LINUX_2_RELEASE_ID = "Amazon Linux release 2 (Karoo)"
@@ -107,7 +107,6 @@ CLOUDWATCHLOG_AGENT = None
 CLOUDWATCH_LOG_SECTION = "cloudwatch-log"
 DEFAULT_CLOUDWATCH_LOG_GROUP = "/aws/efs/utils"
 DEFAULT_FALLBACK_ENABLED = True
-DEFAULT_RETENTION_DAYS = 14
 DEFAULT_UNKNOWN_VALUE = "unknown"
 # 50ms
 DEFAULT_TIMEOUT = 0.05
@@ -191,7 +190,7 @@ REQUEST_PAYLOAD = ""
 FS_ID_RE = re.compile("^(?P<fs_id>fs-[0-9a-f]+)$")
 EFS_FQDN_RE = re.compile(
     r"^((?P<az>[a-z0-9-]+)\.)?(?P<fs_id>fs-[0-9a-f]+)\.(?:[a-z-]+\.)+"
-    r"(?P<region>[a-z0-9-]+)\.(?P<dns_name_suffix>[a-z0-9.]+)$"
+    r"(?P<region>[a-z0-9-]+)\.(?P<dns_name_suffix>[a-z0-9.-]+)$"
 )
 AP_ID_RE = re.compile("^fsap-[0-9a-f]{17}$")
 
@@ -1426,10 +1425,15 @@ def find_command_path(command, install_method):
     # For more information, see https://brew.sh/2021/02/05/homebrew-3.0.0/
     else:
         env_path = "/opt/homebrew/bin:/usr/local/bin"
-    os.putenv("PATH", env_path)
+
+    existing_path = os.environ.get("PATH", "")
+    search_path = env_path + ":" + existing_path if existing_path else env_path
+
+    env = os.environ.copy()
+    env["PATH"] = search_path
 
     try:
-        path = subprocess.check_output(["which", command])
+        path = subprocess.check_output(["which", command], env=env)
         return path.strip().decode()
     except subprocess.CalledProcessError as e:
         fatal_error(
@@ -1480,7 +1484,7 @@ def write_stunnel_config_file(
     hand-serialize it.
     """
 
-    stunnel_options = get_stunnel_options()
+    stunnel_options = [] if efs_proxy_enabled else get_stunnel_options()
     mount_filename = get_mount_specific_filename(fs_id, mountpoint, tls_port)
 
     system_release_version = get_system_release_version()
@@ -2224,9 +2228,15 @@ def call_nfs_mount_command_with_retry_succeed(
             out, err = proc.communicate(timeout=retry_nfs_mount_command_timeout_sec)
             rc = proc.poll()
             if rc != 0:
+                is_access_point_mount = "accesspoint" in options
                 continue_retry = any(
                     error_string in str(err) for error_string in RETRYABLE_ERRORS
                 )
+
+                # Only retry "access denied" for access point mounts, handles race condition that can occur during AP backend provisioning
+                if not continue_retry and "access denied by server" in str(err):
+                    continue_retry = is_access_point_mount
+
                 if continue_retry:
                     logging.error(
                         'Mounting %s to %s failed, return code=%s, stdout="%s", stderr="%s", mount attempt %d/%d, '
@@ -3224,8 +3234,18 @@ def match_device(config, device, options):
         return remote, path, None
 
     try:
-        primary, secondaries, _ = socket.gethostbyname_ex(remote)
-        hostnames = list(filter(lambda e: e is not None, [primary] + secondaries))
+        addrinfo = socket.getaddrinfo(
+            remote, None, socket.AF_UNSPEC, socket.SOCK_STREAM, 0, socket.AI_CANONNAME
+        )
+        hostnames = list(
+            set(
+                filter(
+                    lambda e: e is not None and e != "", [info[3] for info in addrinfo]
+                )
+            )
+        )
+        if not hostnames:
+            hostnames = [remote]
     except socket.gaierror:
         create_default_cloudwatchlog_agent_if_not_exist(config, options)
         fatal_error(
@@ -3539,7 +3559,7 @@ def get_cloudwatchlog_config(config, fs_id=None):
                 )
 
     logging.debug("Pushing logs to log group named %s in Cloudwatch.", log_group_name)
-    retention_days = DEFAULT_RETENTION_DAYS
+    retention_days = None
     if config.has_option(CLOUDWATCH_LOG_SECTION, "retention_in_days"):
         retention_days = config.get(CLOUDWATCH_LOG_SECTION, "retention_in_days")
 
@@ -3547,7 +3567,7 @@ def get_cloudwatchlog_config(config, fs_id=None):
 
     return {
         "log_group_name": log_group_name,
-        "retention_days": int(retention_days),
+        "retention_days": None if retention_days is None else int(retention_days),
         "log_stream_name": log_stream_name,
     }
 
@@ -3644,10 +3664,13 @@ def create_cloudwatch_log_group(cloudwatchlog_client, log_group_name):
 def cloudwatch_put_retention_policy_helper(
     cloudwatchlog_client, log_group_name, retention_days
 ):
-    cloudwatchlog_client.put_retention_policy(
-        logGroupName=log_group_name, retentionInDays=retention_days
-    )
-    logging.debug("Set cloudwatch log group retention days to %s" % retention_days)
+    if retention_days is not None:
+        cloudwatchlog_client.put_retention_policy(
+            logGroupName=log_group_name, retentionInDays=retention_days
+        )
+        logging.debug("Set cloudwatch log group retention days to %s" % retention_days)
+    else:
+        cloudwatchlog_client.delete_retention_policy(logGroupName=log_group_name)
 
 
 def put_cloudwatch_log_retention_policy(
