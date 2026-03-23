@@ -30,7 +30,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ## Installing Go
 
 Ensure you have Go 1.17.13 or later is installed and configured on your system.
-Some distributions provide Go packages through package manager, but they may have outdated versions. 
+Some distributions provide Go packages through package manager, but they may have outdated versions.
 ```bash
 # Try installing from package manager (may not be available or have outdated go version)
 # RPM-based
@@ -42,7 +42,7 @@ sudo zypper refresh
 sudo zypper install -y go
 
 # DEB-based
-sudo apt-get update  
+sudo apt-get update
 sudo apt-get -y install golang
 
 # Verify Go 1.17.13 or later is installed
@@ -95,7 +95,7 @@ export CXX=g++-10
 
 Building AWS-LC requires CMake 3.0 or later. CMake is typically available through the standard packager manager.
 
-**Amazon Linux 2 specific:** 
+**Amazon Linux 2 specific:**
 
 Install `cmake3` instead of `cmake`:
 
@@ -108,7 +108,7 @@ sudo yum -y install cmake3
 ### RHEL/CentOS/Amazon Linux/Fedora
 
 ```bash
-sudo yum -y install git rpm-build make rust cargo openssl-devel gcc gcc-c++ cmake wget perl # remove gcc gcc-c++ here if you already installed a compatible version following GCC Version Requirements instruction
+sudo yum -y install git rpm-build make rust cargo openssl-devel gcc gcc-c++ cmake3 wget perl # remove gcc gcc-c++ here if you already installed a compatible version following GCC Version Requirements instruction
 git clone https://github.com/aws/efs-utils
 cd efs-utils
 make rpm
@@ -119,7 +119,7 @@ sudo yum -y install build/amazon-efs-utils*rpm
 
 ```bash
 sudo zypper refresh
-sudo zypper install -y git binutils rpm-build make rust cargo libopenssl-devel gcc gcc-c++ cmake wget perl # remove gcc gcc-c++ here if you already installed a compatible version following GCC Version Requirements instruction, if you encounter "Choose from above solutions.." in this step, remove -y flag and choose manually.
+sudo zypper install -y git binutils rpm-build make rust cargo libopenssl-devel gcc gcc-c++ cmake3 wget perl # remove gcc gcc-c++ here if you already installed a compatible version following GCC Version Requirements instruction, if you encounter "Choose from above solutions.." in this step, remove -y flag and choose manually.
 git clone https://github.com/aws/efs-utils
 cd efs-utils
 make rpm
@@ -179,6 +179,13 @@ Make sure that you have a linker installed on your system. For example, on Amazo
 yum install gcc
 ```
 
+**When you run `make rpm`, compilation of efs-proxy fails due to `Missing dependency: Go is required for FIPS. Missing dependency: cmake` or `CMake 3.5...3.31 or higher is required.  You are running version 2.8.12.2`**:
+
+Make sure you have installed go and cmake3. On Amazon Linux or RHEL, install the necessary dependencies with
+```bash
+yum install go cmake3 gcc gcc-c++
+```
+
 ### Installation Issue - Failed Build Dependencies ###
 
 If rust dependencies was installed using rustup and the package manager does not have a rust and/or cargo package installed, you may see an error like this.
@@ -191,11 +198,11 @@ error: Failed build dependencies:
 
 In this case, the 'make rpm' command in the installation script above should be replaced by 'make rpm-without-system-rust' to remove the rpmbuild dependency check.
 
-### AWS-LC FIPS module build issue: WARNING: FIPS build is known to fail on GCC >= 14 ### 
+### AWS-LC FIPS module build issue: WARNING: FIPS build is known to fail on GCC >= 14 ###
 
 For Debian 13, Fedora 41/42, RHEL 10 and openSUSE Tumbleweed, default GCC version is higher than 14, follow instructions in GCC Version Requirements to install a compatiable GCC version.
 
-### AWS-LC FIPS module build issue: Your compiler (cc) is not supported due to a memcmp related bug reported ### 
+### AWS-LC FIPS module build issue: Your compiler (cc) is not supported due to a memcmp related bug reported ###
 
 For Ubuntu 20.04, GCC installed from package manager on Ubuntu 20.04 show this error during build, follow instructions in GCC Version Requirements to install a compatiable GCC version.
 

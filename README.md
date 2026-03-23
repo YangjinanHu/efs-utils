@@ -2,7 +2,7 @@
 
 # efs-utils
 
-Utilities for Amazon Elastic File System (EFS)
+Utilities for Amazon Elastic File System (EFS) and Amazon S3 Files
 
 The `efs-utils` package has been verified against the following Linux distributions:
 
@@ -34,11 +34,12 @@ The `efs-utils` package has been verified against the following MacOS distributi
     - [On other Linux distributions](#on-other-linux-distributions)
     - [On macOS Tahoe, macOS Sequoia, macOS Sonoma and macOS Ventura distribution](#on-macos-tahoe-macos-sequoia-macos-sonoma-and-macos-ventura-distribution)
   - [Usage](#usage)
-    - [mount.efs](#mountefs)
+    - [mount.efs and mount.s3files](#mountefs-and-mounts3files)
     - [MacOS](#macos)
     - [amazon-efs-mount-watchdog](#amazon-efs-mount-watchdog)
   - [Troubleshooting](#troubleshooting)
   - [Upgrading to efs-utils v2.0.0](#upgrading-from-efs-utils-v1-to-v2)
+  - [Upgrading to efs-utils v3.0.0](#upgrading-from-efs-utils-v2-to-v3)
   - [Upgrading stunnel for RHEL/CentOS](#upgrading-stunnel-for-rhelcentos)
   - [Upgrading stunnel for SLES12](#upgrading-stunnel-for-sles12)
   - [Upgrading stunnel for MacOS](#upgrading-stunnel-for-macos)
@@ -73,7 +74,7 @@ $ sudo yum -y install amazon-efs-utils
 ```
 
 ### Install via AWS Systems Manager Distributor
-You can now use AWS Systems Manage Distributor to automatically install or update `amazon-efs-utils`. 
+You can now use AWS Systems Manage Distributor to automatically install or update `amazon-efs-utils`.
 Please refer to [Using AWS Systems Manager to automatically install or update Amazon EFS clients](https://docs.aws.amazon.com/efs/latest/ug/manage-efs-utils-with-aws-sys-manager.html) for more guidance.
 
 The following are prerequisites for using AWS Systems Manager Distributor to install or update `amazon-efs-utils`:
@@ -93,7 +94,7 @@ Building from source requires Rust 1.70+, Cargo, Go 1.17.13+, CMake 3.0+, GCC/G+
 
 ### On macOS Tahoe, macOS Sequoia, macOS Sonoma and macOS Ventura distribution
 
-For EC2 Mac instances running macOS Tahoe, macOS Sequoia, macOS Big Sur, macOS Monterey, macOS Sonoma and macOS Ventura, you can install amazon-efs-utils from the 
+For EC2 Mac instances running macOS Tahoe, macOS Sequoia, macOS Big Sur, macOS Monterey, macOS Sonoma and macOS Ventura, you can install amazon-efs-utils from the
 [homebrew-aws](https://github.com/aws/homebrew-aws) respository. **Note that this will ONLY work on EC2 instances
 running macOS Tahoe, macOS Sequoia, macOS Sonoma and macOS Ventura, not local Mac computers.**
 ```bash
@@ -103,7 +104,7 @@ brew install amazon-efs-utils
 This will install amazon-efs-utils in:
 - Intel Macs: `/usr/local/Cellar/amazon-efs-utils`
 - Apple Silicon Macs: `/opt/homebrew/Cellar/amazon-efs-utils`
-  		  
+
 ***Follow the instructions in caveats when using efs-utils on EC2 Mac instance for the first time.*** To check the package caveats run below command
 ```bash
 brew info amazon-efs-utils
@@ -111,85 +112,139 @@ brew info amazon-efs-utils
 
 ## Usage
 
-### mount.efs
-`efs-utils` includes a mount helper utility, `mount.efs`, that simplifies and improves the performance of EFS file system mounts.
+### mount.efs and mount.s3files
+`efs-utils` includes two mount helper utilities: `mount.efs` for EFS file system mounts, and `mount.s3files` for S3 Files file system mounts (available from v3.0.0+). Both utilities simplify mounting and improve the performance for their respective file systems.
 
-`mount.efs` launches a proxy process that forwards NFS traffic from the kernel's NFS client to EFS.
+Both mount helpers launch a proxy process that forwards NFS traffic from the kernel's NFS client to the respective file system.
 This proxy is responsible for TLS encryption, and for providing improved throughput performance.
 
 To mount with the recommended default options, simply run:
 
 ```bash
+# For EFS file systems
 sudo mount -t efs file-system-id efs-mount-point/
+
+# For S3 Files file systems
+sudo mount -t s3files file-system-id s3files-mount-point/
 ```
 
 To mount file system to a specific mount target of the file system, run:
 
 ```bash
+# For EFS file systems
 sudo mount -t efs -o mounttargetip=mount-target-ip-address file-system-id efs-mount-point/
+
+# For S3 Files file systems
+sudo mount -t s3files -o mounttargetip=mount-target-ip-address file-system-id s3files-mount-point/
 ```
 
 To mount file system within a given network namespace, run:
 
 ```bash
+# For EFS file systems
 sudo mount -t efs -o netns=netns-path file-system-id efs-mount-point/
+
+# For S3 Files file systems
+sudo mount -t s3files -o netns=netns-path file-system-id s3files-mount-point/
 ```
 
-To mount file system to the mount target in a specific availability zone (e.g. us-east-1a), run:
+To mount file system to the mount target in a specific availability zone, run:
 
 ```bash
+# For EFS file systems (use az name, e.g. us-east-1a)
 sudo mount -t efs -o az=az-name file-system-id efs-mount-point/
+
+# For S3 Files file systems (use az id, e.g. use1-az1)
+sudo mount -t s3files -o azid=az-id-name file-system-id s3files-mount-point/
 ```
 
 To mount file system to the mount target in a specific region (e.g. us-east-1), run:
 
 ```bash
+# For EFS file systems
 sudo mount -t efs -o region=region-name file-system-id efs-mount-point/
+
+# For S3 Files file systems
+sudo mount -t s3files -o region=region-name file-system-id s3files-mount-point/
 ```
 
 **Note: The [prequisites in the crossaccount section below](#crossaccount-option-prerequisites) must be completed before using the crossaccount option.**
 
-To mount the filesystem mount target in the same physical availability zone ID (e.g. use1-az1) as the client instance over cross-AWS-account mounts, run:
-```
+To mount an EFS filesystem mount target in the same physical availability zone ID (e.g. use1-az1) as the client instance over cross-AWS-account mounts, run:
+
+Note: This feature is not supported for S3 Files.
+```bash
 sudo mount -t efs -o crossaccount file-system-id efs-mount-point/
 ```
 
-To mount over TLS, simply add the `tls` option:
+To mount over TLS, simply add the `tls` option. S3 Files mounts are always performed over TLS, so no specific mount option is required for it:
 
 ```bash
+# For EFS file systems
 sudo mount -t efs -o tls file-system-id efs-mount-point/
+
+# For S3 Files file systems
+sudo mount -t s3files file-system-id s3files-mount-point/
 ```
 
-To authenticate with EFS using the system’s IAM identity, add the `iam` option. This option requires the `tls` option.
+To authenticate with EFS using the system’s IAM identity, add the `iam` option. This option requires the `tls` option. Both of these options are automatically included for S3 Files.
 
 ```bash
+# For EFS file systems
 sudo mount -t efs -o tls,iam file-system-id efs-mount-point/
+
+# For S3 Files file systems
+sudo mount -t s3files file-system-id s3files-mount-point/
 ```
 
 To mount using an access point, use the `accesspoint=` option. This option requires the `tls` option.
-The access point must be in the "available" state before it can be used to mount EFS.
+The access point must be in the "available" state before it can be used to perform EFS or S3 Files mounts.
 
 ```bash
+# For EFS file systems
 sudo mount -t efs -o tls,accesspoint=access-point-id file-system-id efs-mount-point/
+
+# For S3 Files file systems (iam and tls are automatically applied)
+sudo mount -t s3files -o accesspoint=access-point-id file-system-id s3files-mount-point/
 ```
 
-To mount your file system automatically with any of the options above, you can add entries to `/efs/fstab` like:
+To mount your file system automatically with any of the options above, you can add entries to `/etc/fstab` like:
 
 ```bash
+# For EFS file systems
 file-system-id efs-mount-point efs _netdev,tls,iam,accesspoint=access-point-id 0 0
+
+# For S3 Files file systems (iam and tls are automatically applied)
+file-system-id s3files-mount-point s3files _netdev,accesspoint=access-point-id 0 0
 ```
 
-For more information on mounting with the mount helper, see the manual page:
+For more information on mounting with the mount helpers, see the manual pages:
 
 ```bash
 man mount.efs
+man mount.s3files
 ```
 
 or refer to the [documentation](https://docs.aws.amazon.com/efs/latest/ug/using-amazon-efs-utils.html).
 
+**Note:** S3 Files mounts always use TLS encryption and IAM authentication. These cannot be disabled.
+
+#### S3 Files-specific Mount Options
+
+- **`nos3readcache`** - Disable the S3 read cache. When specified, the S3 read cache is forced off regardless of the configuration file setting.
+- **`nodirects3read`** - Disable the direct S3 read path. When specified, all read operations go through the standard NFS data path instead of reading directly from S3. This also disables the S3 read cache.
+
+```bash
+# Disable S3 read cache
+sudo mount -t s3files -o nos3readcache file-system-id s3files-mount-point/
+
+# Disable direct S3 read path (also disables S3 read cache)
+sudo mount -t s3files -o nodirects3read file-system-id s3files-mount-point/
+```
+
 #### crossaccount Option Prerequisites
 
-The crossaccount mount option ensures that the client instance Availability Zone ID (e.g. use1-az1) is the same as the EFS mount target Availability Zone ID for cross-AWS-account mounts (e.g. if the client instance is in Account A while the EFS instance is in Account B). 
+The crossaccount mount option ensures that the client instance Availability Zone ID (e.g. use1-az1) is the same as the EFS mount target Availability Zone ID for cross-AWS-account mounts (e.g. if the client instance is in Account A while the EFS instance is in Account B).
 
 Given a client instance in Account A/VPC A and an EFS instance in Account B/VPC B, the following prerequisites must be completed prior to using the crossaccount option:
 - Cross-VPC Communication:
@@ -208,10 +263,12 @@ Once the above steps have been completed, to mount the filesystem mount target i
 sudo mount -t efs -o crossaccount file-system-id efs-mount-point/
 ```
 
+Note that the crossaccount option is not supported for S3 Files. You can manually specify the mount target IP using the `mounttargetip` option if you wish to perform cross-account mounts.
 
-### MacOS 
 
-For EC2 instances using Mac distribution, the recommended default options will perform a tls mount:
+### MacOS
+
+For EC2 instances using MacOS distribution, the recommended default options will perform a tls mount:
 
 ```bash
 sudo mount -t efs file-system-id efs-mount-point/
@@ -221,27 +278,30 @@ sudo mount -t efs file-system-id efs-mount-point/
 sudo mount -t efs -o tls file-system-id efs-mount-point/
 ```
 
-To mount without TLS, simply add the `notls` option:
+To mount without TLS, simply add the `notls` option (not available for S3 Files mounts):
 
 ```bash
 sudo mount -t efs -o notls file-system-id efs-mount-point/
 ```
 
+Note: S3 Files extended attribute operations (such as status check) are not supported on MacOS.
+
 
 ### amazon-efs-mount-watchdog
 
-`efs-utils` contains a watchdog process to monitor the health of TLS mounts. This process is managed by either `upstart` or `systemd` depending on your Linux distribution and `launchd` on Mac distribution, and is started automatically the first time an EFS file system is mounted over TLS.
+`efs-utils` contains a watchdog process to monitor the health of TLS mounts. This process is managed by either `upstart` or `systemd` depending on your Linux distribution and `launchd` on MacOS distribution, and is started automatically the first time an EFS or S3 Files file system is mounted over TLS.
 
 ## Troubleshooting
 If you run into a problem with efs-utils, please open an issue in this repository.  We can more easily
-assist you if relevant logs are provided.  You can find the log file at `/var/log/amazon/efs/mount.log`.  
+assist you if relevant logs are provided.  You can find the log file at `/var/log/amazon/efs/mount.log` for both EFS and S3 Files.
 
-Often times, enabling debug level logging can help us find problems more easily.  To do this, run  
-`sed -i '/logging_level = INFO/s//logging_level = DEBUG/g' /etc/amazon/efs/efs-utils.conf`.  
+Often times, enabling debug level logging can help us find problems more easily.  To do this, run:
+- For EFS: `sed -i '/logging_level = INFO/s//logging_level = DEBUG/g' /etc/amazon/efs/efs-utils.conf`
+- For S3 Files: `sed -i '/logging_level = INFO/s//logging_level = DEBUG/g' /etc/amazon/efs/s3files-utils.conf`
 
-You can also enable stunnel and efs-proxy debug logs with  
-`sed -i '/stunnel_debug_enabled = false/s//stunnel_debug_enabled = true/g' /etc/amazon/efs/efs-utils.conf`.   
-These logs files will also be in `/var/log/amazon/efs/`.
+You can also enable efs-proxy debug logs or stunnel debug logs with:
+- For EFS: `sed -i '/stunnel_debug_enabled = false/s//stunnel_debug_enabled = true/g' /etc/amazon/efs/efs-utils.conf`
+- For S3 Files: `sed -i '/stunnel_debug_enabled = false/s//stunnel_debug_enabled = true/g' /etc/amazon/efs/s3files-utils.conf`
 
 Make sure to perform the failed mount again after running the prior commands before pulling the logs.
 
@@ -249,15 +309,18 @@ Make sure to perform the failed mount again after running the prior commands bef
 Efs-utils v2.0.0 replaces stunnel, which provides TLS encryptions for mounts, with efs-proxy, a component built in-house at AWS.
 Efs-proxy lays the foundation for upcoming feature launches at EFS.
 
-To utilize the improved performance benefits of efs-proxy, you must re-mount any existing mounts. 
+To utilize the improved performance benefits of efs-proxy, you must re-mount any existing mounts.
 
-Efs-proxy is not compatible with OCSP or Mac clients. In these cases, efs-utils will automatically revert back to using stunnel.  
+Efs-proxy is not compatible with OCSP or Mac clients. In these cases, efs-utils will automatically revert back to using stunnel.
 
 If you are building efs-utils v2.0.0 from source, then you need Rust and Cargo >= 1.70.
 
+## Upgrading from efs-utils v2 to v3
+Efs-utils v3.0.0 adds support for S3 Files. There are no breaking changes upgrading from v2 to v3.0.0.
+
 ## Upgrading stunnel for RHEL/CentOS
 
-By default, when using the EFS mount helper with TLS, it enforces certificate hostname checking. The EFS mount helper uses the `stunnel` program for its TLS functionality. Please note that some versions of Linux do not include a version of `stunnel` that supports TLS features by default. When using such a Linux version, mounting an EFS file system using TLS will fail. 
+By default, when using the EFS mount helper with TLS, it enforces certificate hostname checking. The EFS mount helper uses the `stunnel` program for its TLS functionality. Please note that some versions of Linux do not include a version of `stunnel` that supports TLS features by default. When using such a Linux version, mounting an EFS file system using TLS will fail.
 
 Once you’ve installed the `amazon-efs-utils` package, to upgrade your system’s version of `stunnel`, see [Upgrading Stunnel](https://docs.aws.amazon.com/efs/latest/ug/using-amazon-efs-utils.html#upgrading-stunnel).
 
@@ -281,9 +344,9 @@ brew upgrade stunnel
 ## Install botocore
 
 `efs-utils` uses botocore to interact with other AWS services. Please note the package type from the above table and install
-botocore based on that info. If botocore is already installed and does not meet the minimum required version, 
+botocore based on that info. If botocore is already installed and does not meet the minimum required version,
 you can upgrade the botocore by following the [upgrade botocore section](#Upgrade-botocore).
- 
+
 - Download the `get-pip.py` script
 #### RPM
 ```bash
@@ -357,7 +420,11 @@ Follow [install botocore section](#Install-botocore)
 
 ### Step 2. Enable CloudWatch log feature in efs-utils config file `/etc/amazon/efs/efs-utils.conf`
 ```bash
+# For EFS
 sudo sed -i -e '/\[cloudwatch-log\]/{N;s/# enabled = true/enabled = true/}' /etc/amazon/efs/efs-utils.conf
+
+# For S3 Files
+sudo sed -i -e '/\[cloudwatch-log\]/{N;s/# enabled = true/enabled = true/}' /etc/amazon/efs/s3files-utils.conf
 ```
 
 - For MacOS:
@@ -365,7 +432,7 @@ sudo sed -i -e '/\[cloudwatch-log\]/{N;s/# enabled = true/enabled = true/}' /etc
     EFS_UTILS_VERSION=<e.g. 1.34.5>
     sudo sed -i -e '/\[cloudwatch-log\]/{N;s/# enabled = true/enabled = true/;}' /usr/local/Cellar/amazon-efs-utils/${EFS_UTILS_VERSION}/libexec/etc/amazon/efs/efs-utils.conf
 ```
-- For Mac2 instance:
+- For Mac2 instances:
 ```bash
     EFS_UTILS_VERSION=<e.g. 1.34.5>
     sudo sed -i -e '/\[cloudwatch-log\]/{N;s/# enabled = true/enabled = true/;}' /opt/homebrew/Cellar/amazon-efs-utils/${EFS_UTILS_VERSION}/libexec/etc/amazon/efs/efs-utils.conf
@@ -387,24 +454,32 @@ After completing the three prerequisite steps, you will be able to see mount sta
 
 A change in the Linux kernel 5.4+ results a throughput regression on NFS client. With [patch](https://www.spinics.net/lists/linux-nfs/msg75018.html), starting from 5.4.\*, Kernels containing this patch now set the default read_ahead_kb size to 128 KB instead of the previous 15 MB. This read_ahead_kb is used by the Linux kernel to optimize performance on NFS read requests by defining the maximum amount of data an NFS client can pre-fetch in a read call. With the reduced value, an NFS client has to make more read calls to the file system, resulting in reduced performance.
 
-To avoid above throughput regression, efs-utils will modify read_ahead_kb to 15 \* rsize (could be configured via mount option, 1MB by default) after mount success on Linux 5.4+. (not support on MacOS)
+To avoid above throughput regression, efs-utils will modify read_ahead_kb to 15 \* rsize (could be configured via mount option, 1MB by default) after mount success on Linux 5.4+. (not supported on MacOS)
 
 This optimization will be enabled by default. To disable this optimization:
 
 ```bash
 sed -i "s/optimize_readahead = false/optimize_readahead = true/" /etc/amazon/efs/efs-utils.conf
+
+sed -i "s/optimize_readahead = false/optimize_readahead = true/" /etc/amazon/efs/s3files-utils.conf
 ```
 
 To re-enable this optimization
 
 ```bash
 sed -i "s/optimize_readahead = true/optimize_readahead = false/" /etc/amazon/efs/efs-utils.conf
+
+sed -i "s/optimize_readahead = true/optimize_readahead = false/" /etc/amazon/efs/s3files-utils.conf
 ```
 
 You can mount file system with a given rsize, run:
 
 ```bash
+# For EFS
 sudo mount -t efs -o rsize=rsize-value-in-bytes file-system-id efs-mount-point/
+
+# For S3 Files
+sudo mount -t s3files -o rsize=rsize-value-in-bytes file-system-id s3files-mount-point/
 ```
 
 You can also manually chose a value of read_ahead_kb to optimize read throughput on Linux 5.4+ after mount.
@@ -415,15 +490,15 @@ sudo bash -c "echo read-ahead-value-in-kb > /sys/class/bdi/0:$(stat -c '%d' efs-
 
 ## Using botocore to retrieve mount target ip address when dns name cannot be resolved
 
-`efs-utils` now supports using botocore to retrieve mount target ip address when dns name cannot be resolved, e.g. 
-when user is mounting a file system in another VPC. There are two prerequisites to use this feature:
+`efs-utils` now supports using botocore to retrieve mount target ip address when dns name cannot be resolved, e.g.
+when user is mounting a file system in another VPC. Note that this feature is not supported for S3 Files. There are two prerequisites to use this feature:
 
 ### Step 1. Install botocore
 Follow [install botocore section](#Install-botocore)
 
 ### Step 2. Allow DescribeMountTargets and DescribeAvailabilityZones action in the IAM policy
-Allow the `elasticfilesystem:DescribeMountTargets` and `ec2:DescribeAvailabilityZones` action in your policy attached to 
-the iam role you attached to the instance, or the aws credentials configured on your instance. We recommend you attach 
+Allow the `elasticfilesystem:DescribeMountTargets` and `ec2:DescribeAvailabilityZones` action in your policy attached to
+the iam role you attached to the instance, or the aws credentials configured on your instance. We recommend you attach
 AWS managed policy `AmazonElasticFileSystemsUtils`.
 
 This feature will be enabled by default. To disable this feature:
@@ -432,39 +507,48 @@ This feature will be enabled by default. To disable this feature:
 sed -i "s/fall_back_to_mount_target_ip_address_enabled = true/fall_back_to_mount_target_ip_address_enabled = false/" /etc/amazon/efs/efs-utils.conf
 ```
 
-If you decide that you do not want to use this feature, but need to mount a cross-VPC file system, you can use the mounttargetip 
+If you decide that you do not want to use this feature, but need to mount a cross-VPC file system, you can use the mounttargetip
 option to do so, using the desired mount target ip address in the mount command.
 
 ## The way to access instance metadata
-`efs-utils` by default uses IMDSv2, which is a session-oriented method used to access instance metadata. If you don't want to use 
+`efs-utils` by default uses IMDSv2, which is a session-oriented method used to access instance metadata. If you don't want to use
 IMDSv2, you can disable the token fetching feature by running the following command:
 
 ```bash
+# For EFS
 sed -i "s/disable_fetch_ec2_metadata_token = false/disable_fetch_ec2_metadata_token = true/" /etc/amazon/efs/efs-utils.conf
+
+# For S3 Files
+sed -i "s/disable_fetch_ec2_metadata_token = false/disable_fetch_ec2_metadata_token = true/" /etc/amazon/efs/s3files-utils.conf
 ```
 
 ## Use the assumed profile credentials for IAM
-To authenticate with EFS using the system’s IAM identity of an awsprofile, add the `iam` option and pass the profile name to 
-`awsprofile` option. These options require the `tls` option.
+To authenticate with EFS using the system’s IAM identity of an awsprofile, add the `iam` option and pass the profile name to
+`awsprofile` option. These options require the `tls` option. For S3Files, only the `awsprofile` option is needed as the
+`iam` and `tls` options are automatically applied.
 
 ```bash
+# For EFS
 sudo mount -t efs -o tls,iam,awsprofile=test-profile file-system-id efs-mount-point/
+
+# For S3 Files (iam and tls are automatically applied)
+sudo mount -t s3files -o awsprofile=test-profile file-system-id s3files-mount-point/
 ```
 
 To configure the named profile, see the [Named Profiles doc](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)
 and [Support Config File Settings doc](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-settings)
-for more details. If the credentials (e.g. aws_access_key_id) are not configured in `/root/.aws/credentials` or `/root/.aws/config` 
-(note that the path prefix may vary based on the root path of sudo), efs-utils will use botocore to assume the named profile. 
+for more details. If the credentials (e.g. aws_access_key_id) are not configured in `/root/.aws/credentials` or `/root/.aws/config`
+(note that the path prefix may vary based on the root path of sudo), efs-utils will use botocore to assume the named profile.
 This will require botocore is pre-installed, please follow [install botocore section](#Install-botocore) to install botocore first.
 
 Normally you will need to configure your profile IAM policy to make the assume works. For example, if you want to perform a
-cross-account mounting, suppose you have established 
+cross-account mounting, suppose you have established
 [vpc-peering-connections](https://docs.aws.amazon.com/vpc/latest/peering/create-vpc-peering-connection.html) between your vpcs,
-next step you need to do is giving permission to account B so that it can assume a role in account A and then mount the file system 
-that belongs to account A. You can see 
+next step you need to do is giving permission to account B so that it can assume a role in account A and then mount the file system
+that belongs to account A. You can see
 [IAM doc](https://docs.aws.amazon.com/IAM/latest/UserGuide/tutorial_cross-account-with-roles.html) for more details.
 
-After the IAM identity is setup, you can configure your awsprofile credentials or config. You can refer to 
+After the IAM identity is setup, you can configure your awsprofile credentials or config. You can refer to
 [sdk settings](https://docs.aws.amazon.com/sdkref/latest/guide/settings-global.html). For example you can define
 the profile to use the credentials of profile `default` to assume role in account A by defining the `source_profile`.
 
@@ -499,13 +583,21 @@ You can use [web identity to assume a role](https://docs.aws.amazon.com/STS/late
 1) By setting environment variable the path to the file containing the JWT token in `AWS_WEB_IDENTITY_TOKEN_FILE` and by setting `ROLE_ARN` environment variable. The command below shows an example of to leverage it.
 
 ```bash
+# For EFS
 sudo mount -t efs -o tls,iam file-system-id efs-mount-point/
+
+# For S3 Files (iam and tls are automatically applied)
+sudo mount -t s3files file-system-id s3files-mount-point/
 ```
 
 2) By passing the JWT token file path and the role arn as parameters to the mount command. The command below shows an example of to leverage it.
 
 ```bash
+# For EFS
 sudo mount -t efs -o tls,iam,rolearn="ROLE_ARN",jwtpath="PATH/JWT_TOKEN_FILE" file-system-id efs-mount-point/
+
+# For S3 Files (iam and tls are automatically applied)
+sudo mount -t s3files -o rolearn="ROLE_ARN",jwtpath="PATH/JWT_TOKEN_FILE" file-system-id s3files-mount-point/
 ```
 
 ## Environment Variable Support
@@ -584,9 +676,13 @@ spec:
 ## Enabling FIPS Mode
 Efs-Utils is able to enter FIPS mode when mounting your file system. To enable FIPS you need to modify the EFS-Utils config file:
 ```bash
+# For EFS
 sed -i "s/fips_mode_enabled = false/fips_mode_enabled = true/" /etc/amazon/efs/efs-utils.conf
+
+# For S3 Files
+sed -i "s/fips_mode_enabled = false/fips_mode_enabled = true/" /etc/amazon/efs/s3files-utils.conf
 ```
-This will enable any potential API call from EFS-Utils to use FIPS endpoints and cause proxy to enter FIPS mode 
+This will enable any potential API call from EFS-Utils to use FIPS endpoints and cause proxy to enter FIPS mode
 
 Efs-Utils is configured to compile with AWS-LC FIPS module by default. For more information on AWS-LC FIPS module see [AWS-LC FIPS README](https://github.com/aws/aws-lc/blob/main/crypto/fipsmodule/FIPS.md)
 
