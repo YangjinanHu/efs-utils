@@ -153,8 +153,7 @@ sudo zypper refresh
 
 ### `make rpm` fails due to "feature `edition2021` is required" ###
 
-Update to a version of rust and cargo
-that is newer than 1.70. To install a new version of rust and cargo, run
+Update rust and cargo. To install a new version of rust and cargo, run
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 . "$HOME/.cargo/env"

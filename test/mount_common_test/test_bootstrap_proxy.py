@@ -544,3 +544,93 @@ def test_bootstrap_proxy_netns_option(mocker, tmpdir):
     assert EXPECTED_STUNNEL_CONFIG_FILE in popen_args
     assert "nsenter" in popen_args
     assert "--net=" + netns in popen_args
+
+
+def test_bootstrap_proxy_efs_mount_disables_readbypass(mocker, tmpdir):
+    """EFS (non-s3files) mounts should always pass --no-direct-s3-read."""
+    popen_mock, _ = setup_mocks(mocker)
+    mocker.patch("os.rename")
+    state_file_dir = str(tmpdir)
+    mocker.patch("efs_utils_common.proxy.is_ocsp_enabled", return_value=False)
+    mocker.patch(
+        "efs_utils_common.proxy._efs_proxy_bin", return_value="/usr/bin/efs-proxy"
+    )
+    mock_context = mocker.patch("efs_utils_common.proxy.MountContext")
+    mock_context.return_value.mount_type = "EFS"
+
+    with proxy.bootstrap_proxy(
+        MOCK_CONFIG,
+        INIT_SYSTEM,
+        DNS_NAME,
+        FS_ID,
+        MOUNT_POINT,
+        {"tls": None},
+        state_file_dir,
+        efs_proxy_enabled=True,
+    ):
+        pass
+
+    popen_args, _ = popen_mock.call_args
+    popen_args = popen_args[0]
+
+    assert "--no-direct-s3-read" in popen_args
+
+
+def test_bootstrap_proxy_s3files_mount_allows_readbypass(mocker, tmpdir):
+    """S3Files mounts should NOT pass --no-direct-s3-read unless explicitly requested."""
+    popen_mock, _ = setup_mocks(mocker)
+    mocker.patch("os.rename")
+    state_file_dir = str(tmpdir)
+    mocker.patch("efs_utils_common.proxy.is_ocsp_enabled", return_value=False)
+    mocker.patch(
+        "efs_utils_common.proxy._efs_proxy_bin", return_value="/usr/bin/efs-proxy"
+    )
+    mock_context = mocker.patch("efs_utils_common.proxy.MountContext")
+    mock_context.return_value.mount_type = "S3Files"
+
+    with proxy.bootstrap_proxy(
+        MOCK_CONFIG,
+        INIT_SYSTEM,
+        DNS_NAME,
+        FS_ID,
+        MOUNT_POINT,
+        {"tls": None},
+        state_file_dir,
+        efs_proxy_enabled=True,
+    ):
+        pass
+
+    popen_args, _ = popen_mock.call_args
+    popen_args = popen_args[0]
+
+    assert "--no-direct-s3-read" not in popen_args
+
+
+def test_bootstrap_proxy_s3files_mount_with_nodirects3read(mocker, tmpdir):
+    """S3Files mounts with nodirects3read option should pass --no-direct-s3-read."""
+    popen_mock, _ = setup_mocks(mocker)
+    mocker.patch("os.rename")
+    state_file_dir = str(tmpdir)
+    mocker.patch("efs_utils_common.proxy.is_ocsp_enabled", return_value=False)
+    mocker.patch(
+        "efs_utils_common.proxy._efs_proxy_bin", return_value="/usr/bin/efs-proxy"
+    )
+    mock_context = mocker.patch("efs_utils_common.proxy.MountContext")
+    mock_context.return_value.mount_type = "S3Files"
+
+    with proxy.bootstrap_proxy(
+        MOCK_CONFIG,
+        INIT_SYSTEM,
+        DNS_NAME,
+        FS_ID,
+        MOUNT_POINT,
+        {"tls": None, "nodirects3read": None},
+        state_file_dir,
+        efs_proxy_enabled=True,
+    ):
+        pass
+
+    popen_args, _ = popen_mock.call_args
+    popen_args = popen_args[0]
+
+    assert "--no-direct-s3-read" in popen_args

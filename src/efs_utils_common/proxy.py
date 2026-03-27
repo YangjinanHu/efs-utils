@@ -805,7 +805,10 @@ def bootstrap_proxy(
             tunnel_args = [_efs_proxy_bin(), stunnel_config_file]
             if "tls" in options:
                 tunnel_args.append(EFS_PROXY_TLS_OPTION)
-            if "nodirects3read" in options:
+            if (
+                "nodirects3read" in options
+                or MountContext().mount_type != MOUNT_TYPE_S3FILES
+            ):
                 tunnel_args.append(EFS_PROXY_NO_READ_BYPASS_OPTION)
         else:
             tunnel_args = [_stunnel_bin(), stunnel_config_file]
