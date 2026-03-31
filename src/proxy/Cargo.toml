@@ -26,6 +26,7 @@ dyn-clone = "1.0"
 futures = "0.3"
 hyper = "0.14"
 log = "0.4"
+libc = "0.2"
 log4rs = { version = "1.2.0", features = ["rolling_file_appender", "compound_policy", "size_trigger", "fixed_window_roller"]}
 lru = "0.12"
 moka = { version = "0.12.10", features = ["sync"] }

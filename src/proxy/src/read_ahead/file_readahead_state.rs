@@ -29,7 +29,7 @@ use crate::{ctx_debug, ctx_error, ctx_warn};
 /// Minimum time (ms) after loading before an entry can be evicted, protects
 // recently loaded items from being immediately evictedx
 #[cfg(not(test))]
-const MIN_EVICTION_AGE_MS: u64 = 100;
+const MIN_EVICTION_AGE_MS: u64 = 500;
 #[cfg(test)]
 const MIN_EVICTION_AGE_MS: u64 = 0;
 
@@ -309,7 +309,11 @@ impl FileReadAheadState {
         // which may trigger eviction that needs write locks on the same entries.
         let cached_data: Vec<(Range<u64>, Bytes)> = {
             let data_cache = self.acquire_read_lock().await?;
-            let ranges = self.collect_cached_ranges(&read_bypass_request_context, range.clone(), &data_cache)?;
+            let ranges = self.collect_cached_ranges(
+                &read_bypass_request_context,
+                range.clone(),
+                &data_cache,
+            )?;
             drop(data_cache);
             self.fetch_from_cached_ranges(&read_bypass_request_context, ranges, false)
                 .await?
@@ -333,7 +337,10 @@ impl FileReadAheadState {
                 range.start,
                 range.end
             );
-            return Ok((Some(Self::combine_ranges(cached_data, range.clone())?), false));
+            return Ok((
+                Some(Self::combine_ranges(cached_data, range.clone())?),
+                false,
+            ));
         }
 
         // 4. We need to fetch from S3 for what is missing, add place holders in the cache
@@ -395,7 +402,10 @@ impl FileReadAheadState {
         // 6. Combine what we had in cache and what was fetched to return
         let mut all_ranges = cached_data;
         all_ranges.extend(s3_ranges);
-        Ok((Some(Self::combine_ranges(all_ranges, range.clone())?), hit_memory_pressure))
+        Ok((
+            Some(Self::combine_ranges(all_ranges, range.clone())?),
+            hit_memory_pressure,
+        ))
     }
 
     pub fn trigger_speculative_readahead(
@@ -708,7 +718,10 @@ impl FileReadAheadState {
             }
             if range.start > pos {
                 return Err(ReadAheadCacheError {
-                    message: format!("Gap in data at offset {}, next range starts at {}", pos, range.start),
+                    message: format!(
+                        "Gap in data at offset {}, next range starts at {}",
+                        pos, range.start
+                    ),
                 });
             }
             pos = range.end;
@@ -725,7 +738,7 @@ impl FileReadAheadState {
         // Extract just the expected range
         let expected_len = (expected.end - expected.start) as usize;
         let mut result = BytesMut::with_capacity(expected_len);
-        
+
         for (range, bytes) in &ranges {
             if range.end <= expected.start || range.start >= expected.end {
                 continue; // No overlap
@@ -1096,21 +1109,23 @@ impl FileReadAheadState {
         false
     }
 
-    /// Clean up entries stuck in Loading state.
+    /// Clean up stale entries: stuck loading or loaded but idle for over TTL.
     /// Returns the number of entries cleaned up.
-    pub async fn cleanup_stuck_loading_entries(&self) -> usize {
-        let mut to_cleanup = Vec::new();
-
-        {
+    pub async fn cleanup_stale_entries(&self, ttl_ms: u64) -> usize {
+        let to_cleanup: Vec<u64> = {
             let Ok(cache) = self.data_cache.try_read() else {
                 return 0;
             };
-            for (&offset, (_, cached_data)) in cache.iter() {
-                if cached_data.is_stuck_loading() {
-                    to_cleanup.push(offset);
-                }
-            }
-        }
+            cache
+                .iter()
+                .filter(|(_, (_, cached_data))| {
+                    // Evict if stuck loading OR if loaded and older than TTL
+                    cached_data.is_stuck_loading()
+                        || (!cached_data.is_loading() && !cached_data.is_created_within(ttl_ms))
+                })
+                .map(|(&offset, _)| offset)
+                .collect()
+        };
 
         if to_cleanup.is_empty() {
             return 0;
@@ -2339,18 +2354,37 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_cleanup_stuck_loading_entries() {
+    async fn test_cleanup_stale_entries() {
         let state = create_test_state();
 
         // Insert a range but don't load it (stays in Loading state)
         state.insert_range(0..100).await.unwrap();
 
-        // Not stuck yet (just created)
-        let cleaned = state.cleanup_stuck_loading_entries().await;
+        // Not stale yet (just created, TTL is 60s)
+        let cleaned = state.cleanup_stale_entries(60_000).await;
         assert_eq!(cleaned, 0);
 
         // Verify the entry still exists
         assert!(!state.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_stale_entries_evicts_old() {
+        let state = create_test_state();
+
+        // Insert and load a range
+        state.insert_range(0..100).await.unwrap();
+        let memory_pool = create_test_memory_pool();
+        state
+            .load_range(0..100, &memory_pool, bytes::Bytes::from(vec![0u8; 100]))
+            .await
+            .unwrap();
+        assert!(!state.is_empty());
+
+        // TTL of 0 means loaded entries are stale - should evict
+        let cleaned = state.cleanup_stale_entries(0).await;
+        assert_eq!(cleaned, 1);
+        assert!(state.is_empty());
     }
 
     #[tokio::test]
@@ -2425,13 +2459,21 @@ mod tests {
             let start = i * chunk_size;
             state.insert_range(start..start + chunk_size).await.unwrap();
             state
-                .load_range(start..start + chunk_size, &state.memory_pool, Bytes::from(vec![0u8; chunk_size as usize]))
+                .load_range(
+                    start..start + chunk_size,
+                    &state.memory_pool,
+                    Bytes::from(vec![0u8; chunk_size as usize]),
+                )
                 .await
                 .unwrap();
             state.lru_insert(start);
         }
 
-        assert_eq!(state.memory_pool.available_chunks(), 0, "Pool should be full");
+        assert_eq!(
+            state.memory_pool.available_chunks(),
+            0,
+            "Pool should be full"
+        );
         assert_eq!(state.get_num_ranges(), 2);
 
         // Get Bytes from first chunk (holds read guard)
@@ -2446,7 +2488,11 @@ mod tests {
 
         // Entry should be removed from data_cache
         assert!(evicted, "evict_entry should return true");
-        assert_eq!(state.get_num_ranges(), 1, "First entry should be removed from cache");
+        assert_eq!(
+            state.get_num_ranges(),
+            1,
+            "First entry should be removed from cache"
+        );
         assert!(!state.has_range_at(0), "Chunk 0 should be gone");
         assert!(state.has_range_at(chunk_size), "Chunk 1 should remain");
     }
@@ -2571,7 +2617,11 @@ mod tests {
             )
             .await;
 
-        assert!(result.is_ok(), "get_data should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "get_data should succeed: {:?}",
+            result.err()
+        );
         let (data, _) = result.unwrap();
         assert!(data.is_some(), "Should return data");
         let bytes = data.unwrap();

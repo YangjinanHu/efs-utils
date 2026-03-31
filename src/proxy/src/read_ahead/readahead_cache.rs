@@ -324,15 +324,17 @@ impl FileReadAheadCache {
         evicted
     }
 
-    /// Clean up stuck loading entries and remove empty file states in a single pass.
-    /// Returns (stuck_removed, empty_removed).
-    async fn cleanup_stuck_and_empty(&self) -> (usize, usize) {
-        let mut stuck_removed = 0;
+    /// Clean up stale entries (older than TTL) and remove empty file states.
+    /// Returns (stale_removed, empty_removed).
+    async fn cleanup_stale_and_empty(&self) -> (usize, usize) {
+        const IDLE_TTL_MS: u64 = 60_000; // 1 minute
+
+        let mut stale_removed = 0;
         let mut empty_files = Vec::new();
 
-        // First pass: cleanup stuck entries and identify empty files
+        // First pass: cleanup stale entries and identify empty files
         for entry in self.file_states.iter() {
-            stuck_removed += entry.value().cleanup_stuck_loading_entries().await;
+            stale_removed += entry.value().cleanup_stale_entries(IDLE_TTL_MS).await;
             if entry.value().is_empty() {
                 empty_files.push(entry.key().clone());
             }
@@ -344,14 +346,16 @@ impl FileReadAheadCache {
             self.file_states.remove(&key);
         }
 
-        (stuck_removed, empty_removed)
+        (stale_removed, empty_removed)
     }
 
-    /// Run a single eviction cycle: proactive LRU eviction + stuck entry cleanup.
+    /// Run a single eviction cycle: proactive LRU eviction + stale entry cleanup.
     pub async fn run_eviction_cycle(&self) -> (usize, usize, usize) {
-        let (stuck_removed, empty_removed) = self.cleanup_stuck_and_empty().await;
+        let (stale_removed, empty_removed) = self.cleanup_stale_and_empty().await;
         let lru_evicted = self.evict_to_target_utilization().await;
-        (lru_evicted, stuck_removed, empty_removed)
+        // Try to shrink the pool if idle
+        self.memory_pool.try_shrink();
+        (lru_evicted, stale_removed, empty_removed)
     }
 
     /// Start a background task that periodically runs eviction cycles.
@@ -754,7 +758,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_cleanup_stuck_and_empty() {
+    async fn test_cleanup_stale_and_empty() {
         let cache = FileReadAheadCache::new(
             100,
             50,
@@ -783,9 +787,9 @@ mod tests {
 
         assert_eq!(cache.get_num_files(), 2);
 
-        // Cleanup should remove empty state1
-        let (stuck_removed, empty_removed) = cache.cleanup_stuck_and_empty().await;
-        assert_eq!(stuck_removed, 0); // No stuck entries
+        // Cleanup should remove empty state1 (stale entries won't be removed yet - TTL is 60s)
+        let (stale_removed, empty_removed) = cache.cleanup_stale_and_empty().await;
+        assert_eq!(stale_removed, 0); // Entry is not stale yet (created within TTL)
         assert_eq!(empty_removed, 1);
         assert_eq!(cache.get_num_files(), 1);
 

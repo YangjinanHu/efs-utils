@@ -162,7 +162,7 @@ impl S3Client {
             prefix: prefix.to_string(),
             client: Arc::new(inner_client),
             cw_publisher: Some(cw_publisher),
-            enabled: Arc::new(AtomicBool::new(false)),
+            enabled: Arc::new(AtomicBool::new(true)),
             validator_task: Mutex::new(None),
             read_bypass_config: read_bypass_config,
             cancellation_token: CancellationToken::new(),
@@ -326,24 +326,21 @@ impl S3Client {
         is_first_check: bool,
     ) {
         if let Some(publisher) = cw_publisher {
-            publisher
-                .publish_s3_reachable(&bucket, result.is_reachable);
-            publisher
-                .publish_s3_permitted(&bucket, !result.is_permission_denied);
+            publisher.publish_s3_reachable(&bucket, result.is_reachable);
+            publisher.publish_s3_permitted(&bucket, !result.is_permission_denied);
 
             // We emit logs when bucket accessibility changes or on the very first check
             let became_enabled = !was_enabled && result.should_enable;
             let became_disabled = was_enabled && !result.should_enable;
 
             if became_enabled || (is_first_check && result.should_enable) {
-                publisher
-                    .emit_log(
-                        LogLevel::Info,
-                        &format!(
-                            "S3 bucket accessible. ReadBypass enabled. bucket='{}', prefix='{}'",
-                            bucket, prefix
-                        ),
-                    );
+                publisher.emit_log(
+                    LogLevel::Info,
+                    &format!(
+                        "S3 bucket accessible. ReadBypass enabled. bucket='{}', prefix='{}'",
+                        bucket, prefix
+                    ),
+                );
             } else if became_disabled || (is_first_check && !result.should_enable) {
                 let reason = if !result.is_reachable {
                     "bucket is not reachable"
@@ -352,14 +349,13 @@ impl S3Client {
                 } else {
                     "bucket check failed"
                 };
-                publisher
-                    .emit_log(
-                        LogLevel::Error,
-                        &format!(
-                            "S3 bucket inaccessible: {}. ReadBypass disabled. bucket='{}', prefix='{}'",
-                            reason, bucket, prefix
-                        ),
-                    );
+                publisher.emit_log(
+                    LogLevel::Error,
+                    &format!(
+                        "S3 bucket inaccessible: {}. ReadBypass disabled. bucket='{}', prefix='{}'",
+                        reason, bucket, prefix
+                    ),
+                );
             }
         }
     }

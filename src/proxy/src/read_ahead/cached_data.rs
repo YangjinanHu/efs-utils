@@ -98,9 +98,14 @@ impl CachedData {
         self.get_state() == CacheEntryState::Loading
     }
 
+    /// Returns true if this entry was created within the last `ms` milliseconds
+    pub fn is_created_within(&self, ms: u64) -> bool {
+        get_current_time_ms().saturating_sub(self.created_time_ms) < ms
+    }
+
     /// Returns true if this entry has been loading for longer than MAX_LOADING_TIME_MS (30s)
     pub fn is_stuck_loading(&self) -> bool {
-        self.is_loading() && (get_current_time_ms() - self.created_time_ms) > MAX_LOADING_TIME_MS
+        self.is_loading() && !self.is_created_within(MAX_LOADING_TIME_MS)
     }
 
     /// Returns true if this entry was loaded within the last `ms` milliseconds
@@ -650,19 +655,16 @@ mod tests {
         // clear() should timeout and return error since we hold the read guard
         let cached_data_clone = cached_data.clone();
         let memory_pool_clone = memory_pool.clone();
-        let handle = tokio::spawn(async move {
-            cached_data_clone.clear(&memory_pool_clone).await
-        });
+        let handle = tokio::spawn(async move { cached_data_clone.clear(&memory_pool_clone).await });
 
         // Wait longer than the timeout would take in a real scenario, but use tokio's
         // test timeout to avoid waiting 15s. The spawn will block on the write lock.
-        let result = tokio::time::timeout(
-            std::time::Duration::from_millis(100),
-            handle,
-        )
-        .await;
+        let result = tokio::time::timeout(std::time::Duration::from_millis(100), handle).await;
 
         // The spawned task should not complete because it's blocked on the write lock
-        assert!(result.is_err(), "clear() should block when read guard is held");
+        assert!(
+            result.is_err(),
+            "clear() should block when read guard is held"
+        );
     }
 }

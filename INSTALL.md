@@ -1,3 +1,11 @@
+# Install Pre-built efs-utils
+
+For supported distributions (see [README](README.md#efs-utils)), you can install a pre-built efs-utils
+
+```bash
+curl https://amazon-efs-utils.aws.com/efs-utils-installer.sh | sudo sh -s -- --install
+```
+
 # Building efs-utils from Source
 
 This guide provides detailed instructions for building `efs-utils` from source on various Linux distributions.
@@ -19,8 +27,7 @@ Building efs-utils v2.0+ requires the following dependencies:
 
 ## Installing Rust and Cargo
 
-If your distribution doesn't provide a rust or cargo package, or it provides versions
-that are older than 1.70, then you can install rust and cargo through rustup:
+Update to the latest version of cargo and rust, which can be done through rustup:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -234,4 +241,4 @@ mount.efs --version
 
 ## Next Steps
 
-See the main [README](efs-utils.README.md) for usage instructions and configuration options.
+See the main [README](README.md) for usage instructions and configuration options.

@@ -272,9 +272,17 @@ impl<S: ProxyStream> Controller<S> {
             .await;
 
             // Proxy status loop
+            let mut metrics_interval = tokio::time::interval_at(
+                tokio::time::Instant::now() + Duration::from_secs(60),
+                Duration::from_secs(60),
+            );
             loop {
                 let mut err = Ok(());
                 tokio::select! {
+                    _ = metrics_interval.tick() => {
+                        let fs_id = self.proxy_config.nested_config.fs_id.as_str();
+                        self.emit_nfs_reachability(true, fs_id);
+                    }
                     _ = self.status_reporter.await_report_request() => {
                         let report = status_reporter::Report {
                             proxy_id: state.proxy_id,
@@ -438,8 +446,7 @@ impl<S: ProxyStream> Controller<S> {
                 )
             };
             publisher.emit_log(level, &message);
-            publisher
-                .publish_nfs_reachability(is_reachable, fs_id);
+            publisher.publish_nfs_reachability(is_reachable, fs_id);
         }
     }
 }

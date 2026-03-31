@@ -388,6 +388,19 @@ impl ReadBypassAgent {
                                  software: consider disabling ReadBypass functionality."
                             );
                         }
+                        ReadBypassAgentError::DataEvicted => {
+                            // Transient memory pressure - send delay, don't denylist
+                            ctx_warn!(
+                                read_bypass_request_context,
+                                "Data evicted, sending NFS4ERR_DELAY without denylisting"
+                            );
+                            let _ = Self::respond_failure_to_nfs_client(
+                                read_bypass_request_context.clone(),
+                                message,
+                                nfs_client_sender,
+                            )
+                            .await;
+                        }
                         _ => {
                             ctx_warn!(
                                 read_bypass_request_context,
@@ -537,36 +550,10 @@ impl ReadBypassAgent {
                     Err(ReadBypassAgentError::DataEvicted) => {
                         ctx_warn!(
                             read_bypass_request_context,
-                            "Data evicted, retrying at index {}",
+                            "Data evicted at index {}, returning delay",
                             index
                         );
-                        match s3_reader
-                            .read_data(
-                                read_bypass_request_context.clone(),
-                                readbypass_op_res.data_locator.clone(),
-                                readbypass_op_res.filehandle.clone(),
-                                readbypass_op_res.file_size,
-                            )
-                            .await
-                        {
-                            Ok(Some(data)) => {
-                                read_results.insert(index, data);
-                                break;
-                            }
-                            Ok(None) | Err(ReadBypassAgentError::DataEvicted) => {
-                                ctx_warn!(
-                                    read_bypass_request_context,
-                                    "Data evicted twice at index {}, denylisting",
-                                    index
-                                );
-                                return Err(ReadBypassAgentError::CacheInternalError(
-                                    ReadAheadCacheError {
-                                        message: "Data evicted repeatedly".to_string(),
-                                    },
-                                ));
-                            }
-                            Err(e) => return Err(e),
-                        }
+                        return Err(ReadBypassAgentError::DataEvicted);
                     }
                     Err(e) => {
                         ctx_warn!(read_bypass_request_context, "Failed to read data: {:?}", e);
@@ -1058,9 +1045,7 @@ mod tests {
         assert!(result.is_ok(), "EOF read should succeed without S3 call");
         let result_compound = result.unwrap().expect("Expected compound response");
 
-        if let nfs_resop4::OP_READ(READ4res::NFS4_OK(read_op_res)) =
-            &result_compound.resarray[1]
-        {
+        if let nfs_resop4::OP_READ(READ4res::NFS4_OK(read_op_res)) = &result_compound.resarray[1] {
             if let DataPayload::Data(res_data) = &read_op_res.data {
                 assert!(res_data.is_empty(), "EOF read should return empty data");
             } else {
@@ -1564,63 +1549,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_data_evicted_retry_succeeds_on_second_attempt() {
-        // First call returns DataEvicted, second succeeds
-        let mock_reader: Arc<dyn S3Reader> = Arc::new(DataEvictedMockReader::new(1));
-        let read_bypass_context = Arc::new(ReadBypassContext::default().await);
-        let read_bypass_request_context =
-            Arc::new(ReadBypassRequestContext::new(read_bypass_context, 0));
-        let (nfs_client_sender, mut nfs_client_receiver) = mpsc::channel::<ConnectionMessage>(10);
-
-        let compound_res = COMPOUND4res {
-            status: nfsstat4::NFS4_OK,
-            tag: utf8string(b"test".to_vec()),
-            resarray: vec![
-                get_sample_op_sequence_res(),
-                get_sample_op_read_bypass_accepted_res(0, 1024, 2048),
-                get_sample_op_getattr_res(),
-            ],
-        };
-        let message = create_nfs_rpc_envelope_batch_from_compound(
-            RpcMessageType::Reply,
-            compound_res.clone(),
-        );
-
-        ReadBypassAgent::process_message(
-            read_bypass_request_context.clone(),
-            message,
-            mock_reader,
-            nfs_client_sender,
-        )
-        .await;
-
-        // Should NOT be denylisted since retry succeeded
-        if let nfs_resop4::OP_AWSFILE_READ_BYPASS(
-            AWSFILE_READ_BYPASS4res::NFS4ERR_AWSFILE_BYPASS(err_op),
-        ) = &compound_res.resarray[1]
-        {
-            assert!(
-                !read_bypass_request_context
-                    .fh_denylist
-                    .contains(&err_op.filehandle),
-                "Should not denylist on successful retry"
-            );
-        }
-
-        // Should receive successful response
-        let message = nfs_client_receiver.recv().await;
-        assert!(message.is_some(), "Should receive response");
-        if let Some(ConnectionMessage::Response(batch)) = message {
-            let nfs_envelope = NfsRpcEnvelope::try_from(batch.rpcs[0].clone()).unwrap();
-            if let RefNfsCompound::Compound4res(compound_info) = &nfs_envelope.body {
-                assert!(matches!(compound_info.compound.status, nfsstat4::NFS4_OK));
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_data_evicted_twice_denylists() {
-        // Both calls return DataEvicted
+    async fn test_data_evicted_does_not_denylist() {
+        // DataEvicted should send NFS4ERR_DELAY but NOT denylist
         let mock_reader: Arc<dyn S3Reader> = Arc::new(DataEvictedMockReader::new(2));
         let read_bypass_context = Arc::new(ReadBypassContext::default().await);
         let read_bypass_request_context =
@@ -1649,16 +1579,16 @@ mod tests {
         )
         .await;
 
-        // Should be denylisted after two evictions
+        // Should NOT be denylisted - eviction is transient
         if let nfs_resop4::OP_AWSFILE_READ_BYPASS(
             AWSFILE_READ_BYPASS4res::NFS4ERR_AWSFILE_BYPASS(err_op),
         ) = &compound_res.resarray[1]
         {
             assert!(
-                read_bypass_request_context
+                !read_bypass_request_context
                     .fh_denylist
                     .contains(&err_op.filehandle),
-                "Should denylist after repeated evictions"
+                "Should NOT denylist on eviction"
             );
         }
 
@@ -1720,8 +1650,10 @@ mod tests {
                 get_sample_op_getattr_res(),
             ],
         };
-        let message =
-            create_nfs_rpc_envelope_batch_from_compound(RpcMessageType::Reply, compound_res.clone());
+        let message = create_nfs_rpc_envelope_batch_from_compound(
+            RpcMessageType::Reply,
+            compound_res.clone(),
+        );
 
         rba_sender.send(message).await.unwrap();
 

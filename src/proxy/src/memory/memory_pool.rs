@@ -459,6 +459,13 @@ impl MemoryPool {
         chunk.pool = None; // Clear the pool reference so this chunk knows to deallocate if dropped
         free_list.replace(Box::new(chunk));
     }
+
+    /// Attempt to shrink the pool if utilization is low.
+    /// Call this periodically when the pool may be idle.
+    pub fn try_shrink(&self) {
+        let head = self.free_list.lock().unwrap();
+        self.resize_if_needed(head);
+    }
 }
 
 #[cfg(test)]

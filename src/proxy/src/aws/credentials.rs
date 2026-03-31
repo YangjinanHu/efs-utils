@@ -26,7 +26,7 @@ use aws_credential_types::{
     Credentials,
 };
 
-use log::warn;
+use log::{debug, info, warn};
 
 use crate::{config_parser::ProxyConfig, utils::is_running_on_lambda};
 
@@ -40,18 +40,25 @@ pub struct ProxyCredentialsChain {
 
 impl ProxyCredentialsChain {
     pub async fn new_from_config(proxy_config: &ProxyConfig) -> Self {
-        let region = resolve_region(proxy_config).await;
-
         if is_running_on_lambda() {
+            info!("ProxyCredentialsChain: running on Lambda, using Environment provider only");
             let env_provider = EnvironmentVariableCredentialsProvider::new();
             return ProxyCredentialsChain {
                 provider_chain: CredentialsProviderChain::first_try("Environment", env_provider),
             };
         }
 
+        // Ensure HOME is set for AWS SDK profile credential resolution.
+        // Mount helper / watchdog may launch proxy with a minimal environment (e.g., systemd)
+        // where HOME is not set. The AWS SDK needs HOME to resolve ~/.aws/credentials.
+        crate::utils::ensure_home_env_set();
+
+        let region = resolve_region(proxy_config).await;
+
         let provider_config = ProviderConfig::default().with_region(region);
 
-        let mut profile_provider_builder = aws_config::profile::credentials::Builder::default();
+        let mut profile_provider_builder =
+            aws_config::profile::credentials::Builder::default().configure(&provider_config);
         if let Some(profile) = &proxy_config.nested_config.read_bypass_config.profile {
             profile_provider_builder = profile_provider_builder.profile_name(profile);
         }
@@ -126,7 +133,15 @@ impl ProxyCredentialsChain {
 
     // TODO [anthotse 2025-07-09][EFS-76067] Add logging
     async fn credentials(&self) -> provider::Result {
-        self.provider_chain.provide_credentials().await
+        let result = self.provider_chain.provide_credentials().await;
+        match &result {
+            Ok(creds) => debug!("ProxyCredentialsChain: credentials resolved: {:?}", creds),
+            Err(e) => warn!(
+                "ProxyCredentialsChain: failed to resolve credentials: {}",
+                e
+            ),
+        }
+        result
     }
 }
 
