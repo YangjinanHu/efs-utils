@@ -7,6 +7,7 @@
 #
 
 %bcond_without check
+%undefine _hardened_build
 
 %if 0%{?amzn1}
 %global python_requires python36
