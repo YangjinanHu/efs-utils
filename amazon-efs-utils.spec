@@ -42,7 +42,7 @@
 
 Name      : amazon-efs-utils
 Version   : 3.0.0
-Release   : 2%{platform}
+Release   : 3%{platform}
 Summary   : This package provides utilities for simplifying the use of EFS file systems
 
 Group     : Amazon/Tools
