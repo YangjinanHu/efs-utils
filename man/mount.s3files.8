@@ -131,9 +131,6 @@ Mount the S3 Files file system to the specified network namespace\&.
 \fBazid\fR
 Mount the S3 Files file system to the specified availability zone ID mount target.
 .TP
-\fBmountport\fR
-Use the port 2049 to bypass portmapper daemon on EC2 Mac instances running macOS Big Sur\&.
-.TP
 \fBmounttargetip\fR
 Mount the S3 Files file system to the specified mount target ip address\&.
 .TP
@@ -235,8 +232,6 @@ For more information on using the \fBamazon\-efs\-utils\fR package, see \
 \fIhttps://docs\&.aws\&.amazon\&.com/efs/latest/ug/using\-amazon\-efs\-utils\&.html\fR \
 in the Amazon EFS User Guide\&. For troubleshooting tips, see the github README: \
 \fIhttps://github\&.com/aws/efs\-utils/tree/master\fR
-.sp
-The paths on EC2 MacOS instances are relocated under /usr/local/Cellar/amazon-efs-utils/<version>/libexec directory.
 .SH "SEE ALSO"
 .sp
 \fBnfs(8)\fR, \fBstunnel(8)\fR, \fBfstab(5)\fR

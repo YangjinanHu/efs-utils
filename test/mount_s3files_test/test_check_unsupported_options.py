@@ -58,7 +58,7 @@ def test_both_s3files_unsupported_options(capsys):
         mount_s3files.MOUNT_TYPE_SPECIFIC_UNSUPPORTED_OPTIONS
     )
 
-    assert len(mount_s3files.MOUNT_TYPE_SPECIFIC_UNSUPPORTED_OPTIONS) == 3
+    assert len(mount_s3files.MOUNT_TYPE_SPECIFIC_UNSUPPORTED_OPTIONS) == 4
 
     with pytest.raises(SystemExit):
         mount_options.check_unsupported_options(options)
@@ -67,6 +67,21 @@ def test_both_s3files_unsupported_options(capsys):
     assert "Unsupported mount options detected" in err
     assert "az" in err
     assert "notls" in err
+
+
+def test_stunnel_option_unsupported(capsys):
+    options = {"stunnel": None}
+    mount_context = context.MountContext()
+    mount_context.unsupported_options = (
+        mount_s3files.MOUNT_TYPE_SPECIFIC_UNSUPPORTED_OPTIONS
+    )
+
+    with pytest.raises(SystemExit):
+        mount_options.check_unsupported_options(options)
+
+    out, err = capsys.readouterr()
+    assert "Unsupported mount options detected" in err
+    assert "stunnel" in err
 
 
 def test_no_s3files_unsupported_options(capsys):

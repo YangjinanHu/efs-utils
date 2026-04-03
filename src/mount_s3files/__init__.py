@@ -71,7 +71,7 @@ FQDN_REGEX_PATTERN = re.compile(
     r"^((?P<az_id>[a-z0-9-]+)\.)(?P<fs_id>fs-[0-9a-f]+)\.(?:[a-z0-9-]+\.)+"
     r"(?P<region>[a-z0-9-]+)\.(?P<dns_name_suffix>[a-z0-9.-]+)$"
 )
-MOUNT_TYPE_SPECIFIC_UNSUPPORTED_OPTIONS = ["az", "crossaccount", "notls"]
+MOUNT_TYPE_SPECIFIC_UNSUPPORTED_OPTIONS = ["az", "crossaccount", "notls", "stunnel"]
 
 
 def parse_arguments_early_exit(args=None):

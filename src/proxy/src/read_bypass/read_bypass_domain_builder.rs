@@ -142,15 +142,19 @@ impl<S: ProxyStream> ReadBypassDomainBuilder<S> {
             .read_bypass_config
             .readahead_cache_enabled;
 
-        let cache_enabled = if config_cache_enabled && !has_sufficient_memory_for_readahead_cache()
-        {
+        if config_cache_enabled {
+            info!("Readahead caching is disabled in current version, disabling");
+        }
+        let cache_enabled = false;
+
+        let cache_enabled = if cache_enabled && !has_sufficient_memory_for_readahead_cache() {
             info!(
                 "Readahead cache disabled due to insufficient system memory (requires >= {} GiB)",
                 crate::utils::MIN_MEMORY_FOR_READAHEAD_GIB
             );
             false
         } else {
-            config_cache_enabled
+            cache_enabled
         };
 
         let read_bypass_context = Arc::new(ReadBypassContext::new(
@@ -189,6 +193,10 @@ mod tests {
             s3_client,
         )
         .await;
+
+        // Verify cache is disabled (hardcoded off in current version)
+        assert!(!builder.read_bypass_context.cache_enabled);
+
         let (tx, _rx) = mpsc::channel(10);
 
         let reader = builder.build_server_reader(tx);
@@ -200,27 +208,5 @@ mod tests {
         let reader_guard = reader.try_lock();
         assert!(reader_guard.is_ok());
         assert_eq!(reader_guard.unwrap().get_domain(), READ_BYPASS_DOMAIN_NAME);
-    }
-
-    #[tokio::test]
-    async fn test_read_bypass_builder_cache_disabled() {
-        let mut config = ProxyConfig::default();
-        config
-            .nested_config
-            .read_bypass_config
-            .readahead_cache_enabled = false;
-        let (shutdown_handle, _waiter) = ShutdownHandle::new(CancellationToken::new());
-        let channel_config = ChannelInitConfig::default();
-        let s3_client = S3Client::default().await;
-
-        let builder = ReadBypassDomainBuilder::<TcpStream>::new(
-            config,
-            channel_config,
-            shutdown_handle,
-            s3_client,
-        )
-        .await;
-
-        assert!(!builder.read_bypass_context.cache_enabled);
     }
 }

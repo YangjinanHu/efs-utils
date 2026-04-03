@@ -281,7 +281,7 @@ impl<S: ProxyStream> Controller<S> {
                 tokio::select! {
                     _ = metrics_interval.tick() => {
                         let fs_id = self.proxy_config.nested_config.fs_id.as_str();
-                        self.emit_nfs_reachability(true, fs_id);
+                        self.emit_nfs_reachability(true, fs_id).await;
                     }
                     _ = self.status_reporter.await_report_request() => {
                         let report = status_reporter::Report {
