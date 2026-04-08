@@ -62,7 +62,7 @@ Additionally, the mount helper has built\-in logging for \
 troubleshooting purposes\&. These logs are located at \fI/var/log/amazon/efs\fR\&.
 .sp
 It is possible to configure your Amazon EC2 instance to automatically \
-remount your Amazon S3 Files file system when it reboots. For more information, \
+remount your Amazon S3 file system when it reboots. For more information, \
 see the analogous online documentation for EFS at: \
 \fIhttps://docs\&.aws\&.amazon\&.com/efs/latest/ug/mount\-fs\-auto\-mount\-onreboot\&.html\fR\&.
 .sp
@@ -84,7 +84,7 @@ options:
 .\}
 .TP
 \fBregion\fR
-Mounts the S3 Files file system from the specified region, overriding any config file value\&.
+Mounts the S3 file system from the specified region, overriding any config file value\&.
 .TP
 \fBtlsport=\fR\fIn\fR
 Configures the proxy process to listen for connections from the NFS client on the specified port\&. \
@@ -110,7 +110,7 @@ Role ARN for IAM authentication with AssumeRoleWithWebIdentity API\&.
 Identity token for IAM authentication with AssumeRoleWithWebIdentity API\&.
 .TP
 \fBaccesspoint\fR
-Mount the S3 Files file system using the specified access point. The access point must be \
+Mount the S3 file system using the specified access point. The access point must be \
 in the "available" state before it can be used to mount S3 Files\&.
 .TP
 \fBawsprofile\fR
@@ -126,58 +126,54 @@ Use the relative uri to lookup IAM credentials from ecs task metadata endpoint\&
 Use the cafile as the stunnel certificate authority file\&.
 .TP
 \fBnetns\fR
-Mount the S3 Files file system to the specified network namespace\&.
+Mount the S3 file system to the specified network namespace\&.
 .TP
 \fBazid\fR
-Mount the S3 Files file system to the specified availability zone ID mount target.
+Mount the S3 file system to the specified availability zone ID mount target.
 .TP
 \fBmounttargetip\fR
-Mount the S3 Files file system to the specified mount target ip address\&.
-.TP
-\fBnos3readcache\fR
-Disable the S3 read cache\&. When specified, the S3 read cache is forced off \
-regardless of the configuration file setting\&.
+Mount the S3 file system to the specified mount target ip address\&.
 .TP
 \fBnodirects3read\fR
 Disable the direct S3 read path\&. When specified, all read operations go through \
-the standard NFS data path instead of reading directly from S3\&. This also disables the S3 read cache\&.
+the standard NFS data path instead of reading directly from S3\&.
 .SH "EXAMPLES"
 .TP
 sudo mount -t s3files fs-abcd1234 /mnt/s3files
-Mount an S3 Files file system with file system ID "fs-abcd1234" at mount point \
+Mount an S3 file system with file system ID "fs-abcd1234" at mount point \
 "/mnt/s3files" with encryption of data in transit. The mount helper will authenticate \
 with S3 Files using the system's IAM identity\&.
 .TP
 sudo mount -t s3files -o mounttargetip=192.0.0.1 /mnt/s3files
-Mount an S3 Files file system with file system ID "fs-abcd1234" on the mount target \
+Mount an S3 file system with file system ID "fs-abcd1234" on the mount target \
 that belongs to the file system with address "192.0.0.1" with encryption of \
 data in transit and IAM authentication\&.
 .TP
 sudo mount -t s3files -o netns=/proc/1/net/ns fs-abcd1234 /mnt/s3files
-Mount an S3 Files file system with file system ID "fs-abcd1234" at mount point \
+Mount an S3 file system with file system ID "fs-abcd1234" at mount point \
 "/mnt/s3files" using encryption of data in transit and IAM authentication in given network namespace \
 '/proc/1/net/ns'
 .TP
-sudo mount -t s3files -o az=use1-az1 fs-abcd1234 /mnt/s3files
-Mount an S3 Files file system with file system ID "fs-abcd1234" at mount point \
+sudo mount -t s3files -o azid=use1-az1 fs-abcd1234 /mnt/s3files
+Mount an S3 file system with file system ID "fs-abcd1234" at mount point \
 "/mnt/s3files" to the mount target in availability zone with ID use1-az1, \
 using encryption of data in transit and IAM authentication\&.
 .TP
 sudo mount -t s3files fs-abcd1234:/child /mnt/s3files
-Mount a non-root directory of an S3 Files file system with file system ID \
+Mount a non-root directory of an S3 file system with file system ID \
 "fs-abcd1234" at mount point "/mnt/s3files" using encryption of data in transit \
 and IAM authentication\&.
 .TP
 sudo mount -t s3files -o verify=0 fs-abcd1234 /mnt/s3files
-Mount an S3 Files file system with file system ID "fs-abcd1234" at mount point \
+Mount an S3 file system with file system ID "fs-abcd1234" at mount point \
 "/mnt/s3files" using encryption of data in transit, IAM authentication, and a verify level of 0\&.
 .TP
 sudo mount -t s3files -o ocsp fs-abcd1234 /mnt/s3files
-Mount an S3 Files file system with file system ID "fs-abcd1234" at mount point \
+Mount an S3 file system with file system ID "fs-abcd1234" at mount point \
 "/mnt/s3files" using encryption of data in transit, IAM authentication, and with OCSP validation enabled\&.
 .TP
 sudo mount -t s3files custom-cname.example.com /mnt/s3files
-Mount an S3 Files file system using the custom DNS name \
+Mount an S3 file system using the custom DNS name \
 "custom-cname\&.example\&.com" \(em which has to \
 resolve to a fully-qualified S3Files DNS name such as \
 "fs\-abcd1234\&.s3files\&.us-east-1\&.on\&.aws" \
@@ -185,12 +181,12 @@ resolve to a fully-qualified S3Files DNS name such as \
 of data in transit and IAM authentication\&.
 .TP
 sudo mount -t s3files -o rolearn="ROLE_ARN",jwtpath="PATH/JWT_TOKEN_FILE" fs-abcd1234 /mnt/s3files
-Mount an S3 Files file system with file system ID "fs-abcd1234" at mount point "/mnt/s3files" \
+Mount an S3 file system with file system ID "fs-abcd1234" at mount point "/mnt/s3files" \
 with encryption of data in transit. The mount helper will assume the role "ROLE_ARN" by calling \
 the AssumeRoleWithWebIdentity API with the identity token at "PATH/JWT_TOKEN_FILE" for IAM authentication\&.
 .TP
 sudo mount -t s3files -o awsprofile=test-profile fs-abcd1234 /mnt/s3files
-Mount an S3 Files file system with file system ID "fs-abcd1234" at mount point "/mnt/s3files" \
+Mount an S3 file system with file system ID "fs-abcd1234" at mount point "/mnt/s3files" \
 with encryption of data in transit. The mount helper will authenticate with S3 Files using \
 the system's IAM identity named profile "test profile", for which the credentials are retrieved \
 either from /root/.aws/credentials or /root/.aws/config. If the credentials are not present \
@@ -200,7 +196,7 @@ on the profile section configuration in root/.aws/config and use the credentials
 with botocore to mount (botocore must be pre-installed)\&.
 .TP
 sudo mount -t s3files -o accesspoint=fsap-12345678 fs-abcd1234 /mnt/s3files
-Mount an S3 Files file system with file system ID "fs-abcd1234" at mount point "/mnt/s3files" \
+Mount an S3 file system with file system ID "fs-abcd1234" at mount point "/mnt/s3files" \
 with encryption of data in transit and IAM authentication. The file system is mounted using the access point \
 "fsap-12345678"\&.
 .SH "FILES"
