@@ -185,6 +185,10 @@ pub struct EfsConfig {
         default = "DEFAULT_PROXY_LOGGING_FILE_COUNT"
     )]
     pub proxy_logging_file_count: usize,
+
+    /// efs-utils version string for channel init
+    #[serde(alias = "efs_utils_version", default)]
+    pub efs_utils_version: String,
 }
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct ReadBypassConfig {
@@ -485,6 +489,7 @@ checkHost = fs-12341234.efs.us-east-1.amazonaws.com
                 proxy_logging_level: None,
                 proxy_logging_max_bytes: DEFAULT_PROXY_LOGGING_MAX_BYTES(),
                 proxy_logging_file_count: DEFAULT_PROXY_LOGGING_FILE_COUNT(),
+                efs_utils_version: String::new(),
             },
         };
 
@@ -581,6 +586,7 @@ jwt_path = baz
                 proxy_logging_level: None,
                 proxy_logging_max_bytes: DEFAULT_PROXY_LOGGING_MAX_BYTES(),
                 proxy_logging_file_count: DEFAULT_PROXY_LOGGING_FILE_COUNT(),
+                efs_utils_version: String::new(),
             },
         };
 
@@ -685,6 +691,7 @@ readahead_max_window_size_bytes = {test_value}
                 proxy_logging_level: None,
                 proxy_logging_max_bytes: DEFAULT_PROXY_LOGGING_MAX_BYTES(),
                 proxy_logging_file_count: DEFAULT_PROXY_LOGGING_FILE_COUNT(),
+                efs_utils_version: String::new(),
             },
         };
 

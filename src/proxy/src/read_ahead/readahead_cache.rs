@@ -984,10 +984,8 @@ mod tests {
         );
     }
 
-    /// Stress test for concurrent reads with cache eviction pressure.
-    /// Reproduces EFS-80336: race condition where eviction between cache collect
-    /// and missing range computation causes data corruption.
-    #[ignore] // Fails until EFS-80336 fix lands
+    /// Stress test for concurrent reads with cache eviction pressure
+    /// to verify no race conditions between eviction and cache operations.
     #[test_case(false, false ; "single_file_random")]
     #[test_case(false, true ; "single_file_sequential")]
     #[test_case(true, false ; "multi_file_random")]
