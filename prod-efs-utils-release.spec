@@ -38,10 +38,10 @@
 
 %global proxy_name efs-proxy
 
-%{?!include_vendor_tarball:%global include_vendor_tarball true}
+%{?!include_vendor_tarball:%define include_vendor_tarball true}
 
 Name      : amazon-efs-utils
-Version   : 3.1.0
+Version   : 3.1.1
 Release   : 1%{platform}
 Summary   : This package provides utilities for simplifying the use of EFS file systems
 
@@ -49,7 +49,6 @@ Group     : Amazon/Tools
 License   : MIT
 URL       : https://aws.amazon.com/efs
 
-ExcludeArch: i386 i686
 BuildArch: x86_64 aarch64
 
 Requires  : nfs-utils
@@ -80,23 +79,15 @@ Requires(postun) : /sbin/service
 # If yum provides rust and cargo
 # use rpmbuild --with system_rust
 %if %{with system_rust}
-BuildRequires: rust-toolset
+BuildRequires: cargo rust
 %endif
 
 BuildRequires: openssl-devel
-%if 0%{?amzn2}
-BuildRequires: cmake3
-%else
-BuildRequires: cmake >= 3.0
-%endif
-BuildRequires: perl
-BuildRequires: gcc
-BuildRequires: gcc-c++
-BuildRequires: golang >= 1.17.13
 
 Source0    : %{name}.tar.gz
 %if "%{include_vendor_tarball}" == "true"
 Source1    : %{proxy_name}-%{version}-vendor.tar.xz
+Source2    : config.toml
 %endif
 
 %description
@@ -124,11 +115,12 @@ if ! command -v rustc &> /dev/null; then
     exit 1
 fi
 
-%autosetup -n %{name} -a1
+%setup -n %{name}
+mkdir -p %{_builddir}/%{name}/src/proxy/.cargo
 %if "%{include_vendor_tarball}" == "true"
-%cargo_prep -v vendor
-%else
-%cargo_prep
+cp %{SOURCE2} %{_builddir}/%{name}/src/proxy/.cargo/
+tar xf %{SOURCE1}
+mv vendor %{_builddir}/%{name}/src/proxy/
 %endif
 
 %build
@@ -137,12 +129,7 @@ fi
 export CMAKE=/usr/bin/cmake3
 %endif
 cd %{_builddir}/%{name}/src/proxy
-%cargo_build
-%cargo_license_summary
-%{cargo_license} > LICENSE.dependencies
-%cargo_vendor_manifest
-mv LICENSE.dependencies ../../
-mv cargo-vendor.txt ../../
+cargo build --release --manifest-path %{_builddir}/%{name}/src/proxy/Cargo.toml
 
 %install
 mkdir -p %{buildroot}%{_sysconfdir}/amazon/efs
@@ -170,15 +157,13 @@ install -p -m 755 %{_builddir}/%{name}/src/mount_s3files/__init__.py %{buildroot
 install -p -m 755 %{_builddir}/%{name}/src/watchdog/__init__.py %{buildroot}%{_bindir}/amazon-efs-mount-watchdog
 install -p -m 644 %{_builddir}/%{name}/man/mount.efs.8 %{buildroot}%{_mandir}/man8
 install -p -m 644 %{_builddir}/%{name}/man/mount.s3files.8 %{buildroot}%{_mandir}/man8
-install -p -m 755 %{_builddir}/%{name}/src/proxy/target/rpm/efs-proxy %{buildroot}%{efs_bindir}/efs-proxy
+install -p -m 755 %{_builddir}/%{name}/src/proxy/target/release/efs-proxy %{buildroot}%{efs_bindir}/efs-proxy
 
 cp -r %{_builddir}/%{name}/src/efs_utils_common/*.py %{buildroot}%{efs_bindir}/efs_utils_common/
 cp -r %{_builddir}/%{name}/src/mount_efs/*.py %{buildroot}%{efs_bindir}/mount_efs/
 cp -r %{_builddir}/%{name}/src/mount_s3files/*.py %{buildroot}%{efs_bindir}/mount_s3files/
 
 %files
-%license LICENSE.dependencies
-%license cargo-vendor.txt
 %defattr(-,root,root,-)
 %if %{with_systemd}
 %{_unitdir}/amazon-efs-mount-watchdog.service
@@ -230,6 +215,10 @@ fi
 %clean
 
 %changelog
+* Mon Apr 27 2026 Zachary Maguire <maguirza@amazon.com> - 3.1.1
+- Update proxy connection scaling logic
+- Fix IndexError in get_system_release_version on SUSE SLES 16
+
 * Fri Apr 17 2026 Samuel Hale <samuhale@amazon.com> - 3.1.0
 - Enable readahead caching in proxy for bypassed reads
 - Clean up warnings in proxy
