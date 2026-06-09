@@ -41,7 +41,7 @@
 %{?!include_vendor_tarball:%global include_vendor_tarball true}
 
 Name      : amazon-efs-utils
-Version   : 3.1.2
+Version   : 3.1.3
 Release   : 1%{platform}
 Summary   : This package provides utilities for simplifying the use of EFS file systems
 
