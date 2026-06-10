@@ -109,7 +109,7 @@ do_install() {
     sudo install -m 444 "$BUILD_ROOT/etc/amazon/efs/efs-utils.crt"      /etc/amazon/efs/
     sudo install -m 644 "$BUILD_ROOT/share/man/man8/mount.efs.8"        "$INSTALL_ROOT/share/man/man8/"
     sudo install -m 644 "$BUILD_ROOT/share/man/man8/mount.s3files.8"    "$INSTALL_ROOT/share/man/man8/"
-    sudo install -m 644 "$BUILD_ROOT/amazon-efs-mount-watchdog.plist"   /Library/LaunchDaemons/
+    sudo install -m 644 "$BUILD_ROOT/amazon-efs-mount-watchdog.plist"   /Library/LaunchAgents/
 
     sudo rm -rf "$INSTALL_ROOT/bin/efs_utils_common" "$INSTALL_ROOT/bin/mount_efs" "$INSTALL_ROOT/bin/mount_s3files"
     sudo cp -r          "$BUILD_ROOT/bin/efs_utils_common"              "$INSTALL_ROOT/bin/"
@@ -119,8 +119,8 @@ do_install() {
     sudo ln -sf "$INSTALL_ROOT/bin/mount.efs"     /Library/Filesystems/efs.fs/Contents/Resources/mount_efs
     sudo ln -sf "$INSTALL_ROOT/bin/mount.s3files" /Library/Filesystems/s3files.fs/Contents/Resources/mount_s3files
 
-    sudo launchctl unload /Library/LaunchDaemons/amazon-efs-mount-watchdog.plist 2>/dev/null || true
-    sudo launchctl load /Library/LaunchDaemons/amazon-efs-mount-watchdog.plist
+    sudo launchctl unload /Library/LaunchAgents/amazon-efs-mount-watchdog.plist 2>/dev/null || true
+    sudo launchctl load /Library/LaunchAgents/amazon-efs-mount-watchdog.plist
 
     echo "Installation complete."
 }
@@ -128,8 +128,8 @@ do_install() {
 # Remove all installed efs-utils files from the system.
 do_uninstall() {
     echo "Uninstalling efs-utils"
-    sudo launchctl unload /Library/LaunchDaemons/amazon-efs-mount-watchdog.plist 2>/dev/null || true
-    sudo rm -f  /Library/LaunchDaemons/amazon-efs-mount-watchdog.plist
+    sudo launchctl unload /Library/LaunchAgents/amazon-efs-mount-watchdog.plist 2>/dev/null || true
+    sudo rm -f  /Library/LaunchAgents/amazon-efs-mount-watchdog.plist
     sudo rm -f  "$INSTALL_ROOT/bin"/{efs-proxy,mount.efs,mount.s3files,amazon-efs-mount-watchdog}
     sudo rm -rf "$INSTALL_ROOT/bin"/{efs_utils_common,mount_efs,mount_s3files}
     sudo rm -f  "$INSTALL_ROOT/lib"/libaws_lc_fips_*.dylib
