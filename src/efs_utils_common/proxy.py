@@ -651,7 +651,7 @@ def start_watchdog(init_system):
         if rc != 0:
             if not os.path.exists(WATCHDOG_SERVICE_PLIST_PATH):
                 fatal_error(
-                    f"Watchdog plist file missing. Copy the watchdog plist file to {WATCHDOG_SERVICE_PLIST_PATH}"
+                    "Watchdog plist file missing. Copy the watchdog plist file in directory /Library/LaunchAgents"
                 )
             subprocess.Popen(
                 ["sudo", "launchctl", "load", WATCHDOG_SERVICE_PLIST_PATH],
