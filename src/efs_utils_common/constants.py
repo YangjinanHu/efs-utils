@@ -144,7 +144,7 @@ UNSUPPORTED_OPTIONS = ["capath"]
 
 WATCHDOG_SERVICE = "amazon-efs-mount-watchdog"
 # MacOS instances use plist files. This files needs to be loaded on launchctl (init system of MacOS)
-WATCHDOG_SERVICE_PLIST_PATH = "/Library/LaunchAgents/amazon-efs-mount-watchdog.plist"
+WATCHDOG_SERVICE_PLIST_PATH = "/Library/LaunchDaemons/amazon-efs-mount-watchdog.plist"
 SYSTEM_RELEASE_PATH = "/etc/system-release"
 OS_RELEASE_PATH = "/etc/os-release"
 MACOS_BIG_SUR_RELEASE = "macOS-11"
