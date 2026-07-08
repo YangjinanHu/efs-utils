@@ -3,7 +3,6 @@
 //! - skip READBYPASS for specific filehandles for configured duration
 //!
 
-// Clean-up warnings in limits of EFS-74761
 #![allow(unused)]
 
 use crate::nfs::nfs4_1_xdr::nfs_fh4;

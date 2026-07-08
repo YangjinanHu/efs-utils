@@ -22,7 +22,6 @@
 //!   over the network.
 //!
 
-// Clean-up warnings in limits of EFS-74761
 #![allow(unused)]
 
 use crate::nfs::error::NfsError;
@@ -136,7 +135,6 @@ pub struct NfsMetadata {
     pub session_id: sessionid4,
     pub slot_id: u32,
     pub sequence_id: u32,
-    // TODO[EFS-74158]: Add file handles and other metadata when needed.
 }
 
 impl Default for NfsMetadata {
@@ -496,8 +494,6 @@ impl NfsCompoundMessage for COMPOUND4res {
                 }
             }
         }
-        // TODO: [EFS-75400] add OP_AWS_READBYPASS support. OP_AWS_READBYPASS response will
-        //        possibly include normal READ Opaque(Ref) data payload.
 
         // At this point, all OP_READ operations have had their internal data made fully owned.
         Ok(())
@@ -1282,7 +1278,6 @@ mod tests {
 
         // compound verification is alread done in test_in_place_replace_operation_opcode_success
     }
-    // TODO: [SIM TBD] Add test cases when we have good candidate for replace op code for COMPOUND4args / CB_COMPOUND4args / CB_COMPOUND4res
 
     /// Verify that AWSFILE_READ_BYPASS4res::default (NFS error) can be
     /// converted to READ4res::default for forwarding to the client.

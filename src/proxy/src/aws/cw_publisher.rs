@@ -24,7 +24,6 @@ pub const S3_BUCKET_IS_REACHABLE: &str = "S3BucketReachable";
 pub const S3_BUCKET_IS_PERMITTED: &str = "S3BucketAccessible";
 pub const NFS_CONNECTION_ACCESSIBLE: &str = "NFSConnectionAccessible";
 
-// Default CloudWatch Log Group name should match DEFAULT_CLOUDWATCH_LOG_GROUP from MagnolioMountHelper package
 pub const DEFAULT_EFS_CLOUDWATCH_LOG_GROUP: &str = "/aws/efs/utils";
 
 /// Dimensions

@@ -6,7 +6,6 @@
 //!   - converting non-bypassable READBYPASS operations to regulart READs
 //!
 
-// Clean-up warnings in limits of EFS-74761
 #![allow(unused)]
 
 use std::{error::Error, sync::Arc};

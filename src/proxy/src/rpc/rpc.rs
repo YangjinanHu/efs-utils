@@ -130,8 +130,6 @@ impl RpcBatch {
         }
     }
 
-    // TODO[2026/02/03 yjnhu] Add metric to track RPC fragment reconstruction frequency
-    // to understand production patterns.
     fn reconstruct_fragments(
         buffer: &mut BytesMut,
         total_len: usize,

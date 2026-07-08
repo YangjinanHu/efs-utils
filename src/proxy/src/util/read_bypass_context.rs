@@ -2,7 +2,6 @@
 //! Data types and structures carrying ReadBypass context, to be shared between various ReadBypass domain component from different threads
 //!
 
-// Clean-up warnings in limits of EFS-74761
 #![allow(unused)]
 
 use std::time::Duration;

@@ -5,7 +5,6 @@
 //! and dispatch messages into other dispatchers if used in a Multi-Domain context.
 //!
 
-// Clean-up warnings in limits of EFS-74761
 #![allow(unused)]
 
 use std::sync::{atomic::Ordering, Arc};

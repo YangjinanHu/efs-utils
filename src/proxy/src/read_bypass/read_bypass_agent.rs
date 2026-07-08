@@ -1,7 +1,6 @@
 //! ReadBypassAgent is a component performing data reads from S3 buckets ("bypass reads"), based on locations received from ReadBypassServerDispatcher
 //!
 
-// Clean-up warnings in limits of EFS-74761
 #![allow(unused)]
 
 use std::{
@@ -206,7 +205,6 @@ impl ReadBypassAgent {
             };
 
             if !Self::is_message_supported(&message) {
-                // TODO: add BUG metric in limits of EFS-76076
                 error!(
                     "Unsupported message is detected, it might by a sign of a bug in efs-utils \
                      software: consider disabling ReadBypass functionality."
@@ -312,7 +310,6 @@ impl ReadBypassAgent {
                 return false;
             }
         } else {
-            // TODO: extend get_nfs_compound_type to return compound type for Envelopes
             error!("Unsupported compound type!");
             return false;
         }
@@ -333,8 +330,6 @@ impl ReadBypassAgent {
             .expect("ReadBypassAgent is expecting to have one compound in the batch!");
 
         if let RefNfsCompound::Compound4res(compound_info) = &mut envelope.body {
-            // TODO: we need to perform full buffer clone here, to do not block a piece of
-            // Socket BytesMut buffer to avoid uncontrolled memory consumption growth (EFS-75867)
             match Self::process_compound(
                 read_bypass_request_context.clone(),
                 &compound_info,
@@ -365,7 +360,6 @@ impl ReadBypassAgent {
                                             "ReadBypassAgent failed to dispatch message to NFSClient: channel might be closed.")
                                     }
                                     _ => {
-                                        // TODO: add BUG metric in limits of EFS-76076
                                         ctx_error!(
                                             read_bypass_request_context,
                                             "Failure during attempt to send message to NFSClient,\
@@ -381,7 +375,6 @@ impl ReadBypassAgent {
                 Err(e) => {
                     match e {
                         ReadBypassAgentError::InvalidCompound => {
-                            // TODO: add BUG metric in limits of EFS-76076
                             ctx_error!(read_bypass_request_context,
                                 "Failure during attempt to process message received from NFS server, \
                                  it might by a sign of a bug in efs-utils \
@@ -563,7 +556,6 @@ impl ReadBypassAgent {
             }
         }
         if read_results.is_empty() {
-            // TODO: add BUG metric in limits of EFS-76076
             ctx_error!(read_bypass_request_context,
                 "No ReadBypass operations found in compound, it might by a sign of a bug in efs-utils \
                  software: consider disabling ReadBypass functionality."

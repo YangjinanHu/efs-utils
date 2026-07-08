@@ -29,7 +29,6 @@ use crate::{
     config_parser::{ProxyConfig, ReadBypassConfig},
 };
 
-// TODO [2025/06/16 anthotse] Set this from EfsConfig or CHANNEL_INIT
 const DEFAULT_PERMISSION_VALIDATION_SECONDS: u64 = 60;
 
 const MAX_CONCURRENT_S3_REQUESTS: usize = 32;

@@ -23,7 +23,7 @@ const DEFAULT_SMALL_FILE_CACHING_THRESHOLD: fn() -> u64 = || 1024 * 1024; // 1 M
 pub const DEFAULT_READ_BYPASS_DENYLIST_SIZE: fn() -> u64 = || 10000;
 pub const DEFAULT_READ_BYPASS_DENYLIST_TTL_SECONDS: fn() -> u64 = || 300;
 // CLoudWatch metrics and logs are disabled by default for proxy.
-// For S3Files they are enabled by default in MagnolioMountHelper/templates/s3files-utils.conf.jinja
+// For S3Files they are enabled by default in s3files-utils.conf.jinja
 const DEFAULT_CLOUDWATCH_METRICS_ENABLED: fn() -> bool = || false;
 const DEFAULT_CLOUDWATCH_LOGS_ENABLED: fn() -> bool = || false;
 const DEFAULT_CLOUD_WATCH_LOGS_RETENTION_DAYS: fn() -> usize = || 14;
@@ -114,7 +114,6 @@ impl ProxyConfig {
     }
 }
 
-// TODO [2025-07-29 anthotse][EFS-76057] Separate feature configurations to separate structs
 #[derive(Default, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct EfsConfig {
     /// The mount target address - DNS name or IP address
@@ -329,8 +328,6 @@ pub struct ReadBypassConfig {
     #[serde(alias = "region")]
     pub region: Option<String>,
 
-    // TODO [2025-06-27 anthotse] MMH may use the "default" profile. We may need to reconcile this
-    // with the cred behavior used in mounting.
     /// For ReadBypass S3 client credentials  
     #[serde(alias = "profile")]
     pub profile: Option<String>,

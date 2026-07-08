@@ -3,7 +3,6 @@
 //! This code might need to be adjusted/fixed after regenerating NFS protocol code from .x file
 //!
 
-// Clean-up warnings in limits of EFS-74761
 #![allow(unused)]
 
 use xdr_codec::Pack;

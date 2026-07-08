@@ -8,7 +8,7 @@ pub enum NfsError {
     #[error("Failed to parse NFS compound message")]
     ParseError,
     #[error("Failed to encode NFS compound message")]
-    #[allow(dead_code)] // TODO in [EFS-74761]
+    #[allow(dead_code)]
     EncodeError,
     #[error("Invalid NFS operation replacement")]
     InvalidOperationReplacement,

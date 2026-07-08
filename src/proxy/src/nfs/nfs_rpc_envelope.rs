@@ -89,8 +89,6 @@ impl Envelope<RefNfsCompound> for NfsRpcEnvelope {
             RefNfsCompound::CbCompound4res(info) => info.into_bytes_mut(),
         };
 
-        // TODO: In limits of EFS-75425 validate/assert header correctness
-
         // Create an RPC envelope from the header and the NFS bytes
         let rpc_envelope = RpcEnvelope::from_header_and_body(self.header, nfs_bytes);
 
@@ -459,6 +457,4 @@ mod tests {
         let result = NfsRpcEnvelope::try_from(BytesMut::from(buffer.as_slice()));
         assert!(matches!(result, Err(RpcParseErrorKind::EmptyPayload)));
     }
-
-    // TODO[EFS-74377] add test for modified NFS payload
 }

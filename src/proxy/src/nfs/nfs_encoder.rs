@@ -4,10 +4,10 @@ use crate::nfs::error::NfsError;
 use crate::nfs::nfs_compound::{NfsCompoundMessage, PackableNfsCompoundInfo};
 use xdr_codec::Pack;
 
-#[allow(dead_code)] // TODO in [EFS-74761]
+#[allow(dead_code)]
 pub struct NfsMessageEncoder;
 
-#[allow(dead_code)] // TODO in [EFS-74761]
+#[allow(dead_code)]
 impl NfsMessageEncoder {
     pub fn encode_compound<T: NfsCompoundMessage + Pack<Vec<u8>>>(
         compound_info: PackableNfsCompoundInfo<T>,

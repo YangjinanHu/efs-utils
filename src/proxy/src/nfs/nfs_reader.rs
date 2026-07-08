@@ -1,7 +1,6 @@
 //! # NFS Reader
 //!
 
-// Clean-up warnings in limits of EFS-74761
 #![allow(unused)]
 
 use std::{
@@ -181,8 +180,6 @@ mod tests {
     use tokio::sync::mpsc::error::SendError;
     use tokio_util::sync::CancellationToken;
 
-    /// Mock dispatcher that always returns SendError to simulate
-    /// a dropped Hub connection (receiver side of channel gone).
     #[derive(Clone)]
     struct FailingDispatcher;
 
@@ -203,10 +200,6 @@ mod tests {
         }
     }
 
-    /// When the dispatcher channel is dropped (SendError), the
-    /// nfs_reader should signal NeedsRestart, not UnexpectedError.
-    /// This ensures the proxy restarts instead of exiting on
-    /// transient Hub connection loss (e.g., load shedding RST).
     #[tokio::test]
     async fn test_dispatch_send_error_triggers_needs_restart() {
         let mut reader = NfsClientReader {

@@ -200,9 +200,6 @@ pub trait Envelope<T> {
                         // Match the nested ReplyData enum
                         match accepted_reply.status() {
                             AcceptedStatus::Success(results) => results,
-                            // If it's not a success, return an empty slice (to be passed through)
-                            // TODO[EFS-74231]: handle cases other than success during integrating
-                            // parsing path.
                             _ => &[],
                         }
                     }

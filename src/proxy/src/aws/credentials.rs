@@ -1,14 +1,14 @@
 //! ### Credentials Chain for AWS SDK Clients
 //!
 //! This credential chain was written to closely follow existing the credential chain used in
-//! MagnolioMountHelper (python). This was done to reduce the likelihood that a different
+//! efs-utils (python). This was done to reduce the likelihood that a different
 //! credential source is used for the mounting in the python code of efs-utils and for the s3
 //! client used here the in proxy. If the python code is migrated to rust, we could consider using
 //! the "DefaultCredentialsChain" instead of this custom one.
 //!
 //! Notes:
 //!
-//! 1. In MagnolioMountHelper (MMH), the "get_aws_security_credentials" method is only called if
+//! 1. In efs-utils, the "get_aws_security_credentials" method is only called if
 //! use_iam is provided, a mount option that is only valid with TLS mounts to EFS. We want to get
 //! creds for s3 client here for ReadBypass even if a non-tls mounts to EFS is used.
 //!
@@ -32,7 +32,6 @@ use crate::{config_parser::ProxyConfig, utils::is_running_on_lambda};
 
 const AWS_CONTAINER_CREDENTIALS_RELATIVE_URI: &str = "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI";
 
-// TODO [2025-07-09 anthotse][EFS-76062] Add unit tests for credential chain behavior validation.
 #[derive(Debug)]
 pub struct ProxyCredentialsChain {
     provider_chain: CredentialsProviderChain,
@@ -131,7 +130,6 @@ impl ProxyCredentialsChain {
         ProxyCredentialsChain { provider_chain }
     }
 
-    // TODO [anthotse 2025-07-09][EFS-76067] Add logging
     async fn credentials(&self) -> provider::Result {
         let result = self.provider_chain.provide_credentials().await;
         match &result {

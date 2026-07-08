@@ -4,7 +4,6 @@
 //! If it is planned to be changed later, these RPC Domain primitives need to be extended.
 //!
 
-// TODO: remove warnings suppression in limits of EFS-74761, when this code is used in proxy components
 #![allow(unused)]
 
 use std::{

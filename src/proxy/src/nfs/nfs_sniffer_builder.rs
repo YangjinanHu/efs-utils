@@ -1,7 +1,6 @@
 //! NFS Sniffer Builder constructs infrastructure for Proxy  to perform only NFS Sniffing functionality
 //!
 
-// Clean-up warnings in limits of EFS-74761
 #![allow(unused)]
 
 use crate::{

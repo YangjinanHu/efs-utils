@@ -3,7 +3,6 @@
 //! This module provides a builder for the Read Bypass domain, which uses the same reader structs
 //! as NfsSnifferBuilder (NfsClientReader/NfsServerReader) but with dispatchers from the read bypass modules.
 
-// Clean-up warnings in limits of EFS-74761
 #![allow(unused)]
 
 use std::{marker::PhantomData, sync::Arc};
