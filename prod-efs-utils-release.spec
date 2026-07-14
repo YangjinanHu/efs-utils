@@ -52,7 +52,11 @@ URL       : https://aws.amazon.com/efs
 ExcludeArch: i386 i686
 BuildArch: x86_64 aarch64
 
+%if 0%{?amzn} <= 2023
 Requires  : nfs-utils
+%else
+Requires  : nfsv4-client-utils
+%endif
 %if 0%{?amzn2}
 Requires  : stunnel5
 %else
@@ -230,6 +234,13 @@ fi
 %clean
 
 %changelog
+* Wed Jul 8 2026 Samuel Hale <samuhale@amazon.com> - 3.2.0
+- Use partition-aware DNS suffix for S3 Files for aws-cn
+- Add regex for region mount option
+
+* Tue Jun 9 2026 Samuel Hale <samuhale@amazon.com> - 3.1.3
+- Rollback DNS Query Change
+
 * Tue Jun 2 2026 Michael Adams <admsam@amazon.com> - 3.1.2
 - Fix channel init deadline establishment
 - Update STS endpoint resolution
