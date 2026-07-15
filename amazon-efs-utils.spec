@@ -42,7 +42,7 @@
 
 Name      : amazon-efs-utils
 Version   : 3.2.0
-Release   : 1%{platform}
+Release   : 2%{platform}
 Summary   : This package provides utilities for simplifying the use of EFS file systems
 
 Group     : Amazon/Tools
@@ -51,7 +51,11 @@ URL       : https://aws.amazon.com/efs
 
 BuildArch: x86_64 aarch64
 
+%if 0%{?amzn} <= 2023
 Requires  : nfs-utils
+%else
+Requires  : nfsv4-client-utils
+%endif
 %if 0%{?amzn2}
 Requires  : stunnel5
 %else
