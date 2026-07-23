@@ -97,6 +97,11 @@ BuildRequires: perl
 BuildRequires: gcc
 BuildRequires: gcc-c++
 BuildRequires: golang >= 1.17.13
+# On Amazon Linux 2027+ (GCC 15+), efs-proxy's C/crypto is built with clang
+# (see %%build), so clang is required at build time there.
+%if 0%{?amzn} >= 2027
+BuildRequires: clang
+%endif
 
 Source0    : %{name}.tar.gz
 %if "%{include_vendor_tarball}" == "true"
@@ -139,6 +144,22 @@ fi
 # For AL2, cmake3 needs to be set as CMAKE env var
 %if 0%{?amzn2}
 export CMAKE=/usr/bin/cmake3
+%endif
+# On Amazon Linux 2027+ (GCC 15+), build the C/crypto with clang to work
+# around the aws-lc-fips-sys FIPS delocator rejecting GCC assembler output.
+# FIPS stays enabled. Reset to a clang-compatible, arch-aware hardening set
+# because rpm's default flags include GCC-only options clang rejects.
+%if 0%{?amzn} >= 2027
+export CC=clang
+export CXX=clang++
+export CFLAGS="-O2 -fstack-protector-strong -fstack-clash-protection -D_FORTIFY_SOURCE=2 -Wno-unused-command-line-argument"
+%ifarch x86_64
+export CFLAGS="$CFLAGS -fcf-protection"
+%endif
+%ifarch aarch64
+export CFLAGS="$CFLAGS -mbranch-protection=standard"
+%endif
+export CXXFLAGS="$CFLAGS"
 %endif
 cd %{_builddir}/%{name}/src/proxy
 %cargo_build
