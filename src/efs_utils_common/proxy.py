@@ -51,6 +51,7 @@ from efs_utils_common.constants import (
     STATE_FILE_DIR,
     VERSION,
     WATCHDOG_SERVICE,
+    WATCHDOG_SERVICE_LEGACY_PLIST_PATH,
     WATCHDOG_SERVICE_PLIST_PATH,
 )
 from efs_utils_common.context import MountContext
@@ -643,35 +644,33 @@ def start_watchdog(init_system):
             logging.debug("%s is already running", WATCHDOG_SERVICE)
 
     elif init_system == "launchd":
+        # Use pgrep to detect if watchdog is running, regardless of how it was started
+        # (brew services, manual launchctl load, or prior mount's start_watchdog call)
         rc = subprocess.call(
-            ["launchctl", "list", WATCHDOG_SERVICE],
+            ["pgrep", "-f", WATCHDOG_SERVICE],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             close_fds=True,
         )
-        if rc == 0:
-            logging.debug("%s is already running", WATCHDOG_SERVICE)
-        else:
-            if not os.path.exists(WATCHDOG_SERVICE_PLIST_PATH):
+        if rc != 0:
+            # Watchdog not running — find the plist and load it
+            if os.path.exists(WATCHDOG_SERVICE_PLIST_PATH):
+                plist_path = WATCHDOG_SERVICE_PLIST_PATH
+            elif os.path.exists(WATCHDOG_SERVICE_LEGACY_PLIST_PATH):
+                plist_path = WATCHDOG_SERVICE_LEGACY_PLIST_PATH
+            else:
                 fatal_error(
                     "Watchdog plist file missing. Copy the watchdog plist file to /Library/LaunchDaemons/"
                 )
                 return
-
-            logging.debug("Loading watchdog from %s", WATCHDOG_SERVICE_PLIST_PATH)
-            rc = subprocess.call(
-                ["launchctl", "load", WATCHDOG_SERVICE_PLIST_PATH],
+            logging.debug("Loading watchdog from %s", plist_path)
+            subprocess.Popen(
+                ["sudo", "launchctl", "load", plist_path],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 close_fds=True,
             )
-            if rc != 0:
-                fatal_error(
-                    "Failed to load watchdog plist %s (exit code %d)"
-                    % (WATCHDOG_SERVICE_PLIST_PATH, rc)
-                )
-                return
-            logging.debug("Loaded watchdog from %s", WATCHDOG_SERVICE_PLIST_PATH)
+            logging.debug("Loaded watchdog from %s", plist_path)
 
     else:
         error_message = 'Could not start %s, unrecognized init system "%s"' % (
