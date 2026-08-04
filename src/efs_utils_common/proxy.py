@@ -50,6 +50,7 @@ from efs_utils_common.constants import (
     STATE_FILE_DIR,
     VERSION,
     WATCHDOG_SERVICE,
+    WATCHDOG_SERVICE_HOMEBREW_PLIST_PATH,
     WATCHDOG_SERVICE_LEGACY_PLIST_PATH,
     WATCHDOG_SERVICE_PLIST_PATH,
 )
@@ -655,6 +656,8 @@ def start_watchdog(init_system):
             # Watchdog not running — find the plist and load it
             if os.path.exists(WATCHDOG_SERVICE_PLIST_PATH):
                 plist_path = WATCHDOG_SERVICE_PLIST_PATH
+            elif os.path.exists(WATCHDOG_SERVICE_HOMEBREW_PLIST_PATH):
+                plist_path = WATCHDOG_SERVICE_HOMEBREW_PLIST_PATH
             elif os.path.exists(WATCHDOG_SERVICE_LEGACY_PLIST_PATH):
                 plist_path = WATCHDOG_SERVICE_LEGACY_PLIST_PATH
             else:

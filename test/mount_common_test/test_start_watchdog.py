@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 import efs_utils_common.proxy as proxy
 from efs_utils_common.constants import (
     WATCHDOG_SERVICE,
+    WATCHDOG_SERVICE_HOMEBREW_PLIST_PATH,
     WATCHDOG_SERVICE_LEGACY_PLIST_PATH,
     WATCHDOG_SERVICE_PLIST_PATH,
 )
@@ -77,6 +78,31 @@ def test_launchd_watchdog_not_running_plist_in_launchdaemons(mocker):
     assert WATCHDOG_SERVICE_PLIST_PATH in load_cmd
 
 
+def test_launchd_watchdog_not_running_fallback_to_homebrew_path(mocker):
+    """pgrep returns non-zero; canonical plist is absent but Homebrew's exists."""
+    call_mock = mocker.patch("subprocess.call", return_value=1)
+    popen_mock = mocker.patch("subprocess.Popen")
+
+    def exists_side_effect(path):
+        if path == WATCHDOG_SERVICE_PLIST_PATH:
+            return False
+        if path == WATCHDOG_SERVICE_HOMEBREW_PLIST_PATH:
+            return True
+        return False
+
+    mocker.patch("os.path.exists", side_effect=exists_side_effect)
+
+    proxy.start_watchdog("launchd")
+
+    utils.assert_called_once(call_mock)
+    utils.assert_called_once(popen_mock)
+    load_cmd = popen_mock.call_args[0][0]
+    assert "sudo" in load_cmd
+    assert "launchctl" in load_cmd
+    assert "load" in load_cmd
+    assert WATCHDOG_SERVICE_HOMEBREW_PLIST_PATH in load_cmd
+
+
 def test_launchd_watchdog_not_running_fallback_to_legacy_path(mocker):
     """pgrep returns non-zero; plist missing from LaunchDaemons but present in LaunchAgents."""
     call_mock = mocker.patch("subprocess.call", return_value=1)
@@ -84,6 +110,8 @@ def test_launchd_watchdog_not_running_fallback_to_legacy_path(mocker):
 
     def exists_side_effect(path):
         if path == WATCHDOG_SERVICE_PLIST_PATH:
+            return False
+        if path == WATCHDOG_SERVICE_HOMEBREW_PLIST_PATH:
             return False
         if path == WATCHDOG_SERVICE_LEGACY_PLIST_PATH:
             return True

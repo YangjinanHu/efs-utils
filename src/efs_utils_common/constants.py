@@ -145,6 +145,10 @@ UNSUPPORTED_OPTIONS = ["capath"]
 WATCHDOG_SERVICE = "amazon-efs-mount-watchdog"
 # MacOS instances use plist files. This files needs to be loaded on launchctl (init system of MacOS)
 WATCHDOG_SERVICE_PLIST_PATH = "/Library/LaunchDaemons/amazon-efs-mount-watchdog.plist"
+# Homebrew services installs the system service under its generated label.
+WATCHDOG_SERVICE_HOMEBREW_PLIST_PATH = (
+    "/Library/LaunchDaemons/homebrew.mxcl.amazon-efs-utils.plist"
+)
 # Legacy path for upgrades from LaunchAgent-based installs
 WATCHDOG_SERVICE_LEGACY_PLIST_PATH = (
     "/Library/LaunchAgents/amazon-efs-mount-watchdog.plist"
